@@ -1,0 +1,32 @@
+{
+  "id": "cyber",
+  "name": "Tech Signals",
+  "desc": "示例模块：科技前沿动态。现在就能用上的新技术、新产品、新研究。",
+  "position": 10,
+  "_comment": "这是 Newsforge 唯一的示例模块，演示模块的写法。照着它复制一个目录、改 id/name/desc/sources，就能创建你自己的模块。",
+
+  "editorial": {
+    "note": "给 AI 编辑的口径（一句话）：只收 48 小时内的实质性科技新闻，拒绝营销通稿；摘要只写事实，观点进点评。",
+    "tone": "冷静、信息密度高，不追捧不唱衰"
+  },
+
+  "sources": [
+    { "type": "rss", "name": "TechCrunch AI", "url": "https://techcrunch.com/category/artificial-intelligence/feed/" },
+    { "type": "rss", "name": "The Verge", "url": "https://www.theverge.com/rss/index.xml" },
+    { "type": "rss", "name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index" },
+    { "type": "rss", "name": "MIT Technology Review", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed/" },
+    { "type": "rss", "name": "Wired", "url": "https://www.wired.com/feed/tag/ai/latest/rss" },
+    { "type": "rss", "name": "The Decoder", "url": "https://the-decoder.com/feed/" },
+    { "type": "rss", "name": "404 Media", "url": "https://www.404media.co/rss/" },
+    { "_t1": "官方一手信源标 tier:'T1'，允许单信源直接入选（见 docs/SCRAPING.md 信源分级）" },
+    { "type": "rss", "name": "OpenAI Blog", "url": "https://openai.com/news/rss.xml", "tier": "T1" },
+    { "type": "rss", "name": "Google Research Blog", "url": "https://research.google/blog/rss/", "tier": "T1" },
+    { "type": "rss", "name": "DeepMind Blog", "url": "https://deepmind.google/blog/rss.xml", "tier": "T1" },
+    { "_weblist": "没有 RSS 的列表页用 weblist + CSS 选择器（避开哈希类名，用属性选择器和语义标签）" },
+    { "type": "weblist", "name": "Anthropic News", "url": "https://www.anthropic.com/news",
+      "itemSelector": "a[href^=\"/news/\"]", "titleSelector": "h4",
+      "publishedAtSelector": "time", "summarySelector": "p", "tier": "T1" },
+    { "_gdelt": "GDELT 是补充源：主力源候选不足 10 条时才启用，标记 [补充源]，编辑优先选主力源" },
+    { "type": "gdelt", "name": "GDELT", "query": "(AI model release OR AI agent launch)" }
+  ]
+}

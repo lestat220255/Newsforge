@@ -1,0 +1,13 @@
+# 构建输出
+dist/
+# 图片二进制（只进 .b64 文本，见 docs/SCRAPING.md 图片策略）
+public/images/*.webp
+public/fonts/*.woff2
+# 抓取候选（7 天清理，不进仓库）
+data/candidates/
+data/source-health.json
+# 本地站点配置（由安装时的对话生成；example 进仓库）
+site.json
+# 系统文件
+node_modules/
+.DS_Store

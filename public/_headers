@@ -1,0 +1,10 @@
+/*
+  Cloudflare Pages 响应头（安全基线）。
+  注意：不上强制 CSP——站内 inline script 多，强制 CSP 会炸。
+*/
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+*/
