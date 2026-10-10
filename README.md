@@ -1,5 +1,9 @@
 # Newsforge
 
+<p align="center">
+  <img src="public/logo.svg" width="96" alt="Newsforge logo">
+</p>
+
 用 AI 对话造一个**属于你自己的每日新闻站**。纯静态、全免费、零运维。
 
 每天早晨，你的 AI 助手自动抓取你关心的信源、写成摘要，部署到 Cloudflare Pages 上。你起床时，网站已经更新好了。
