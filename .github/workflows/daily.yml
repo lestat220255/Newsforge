@@ -1,1 +1,75 @@
+# 每日构建（路径 B：GitHub Actions 无人值守 + LLM API + R2）
+#
+# 工作原理（步骤顺序不能乱）：
+#   1. 抓取信源 → LLM 自动编辑 → 本地生成图片 + edition JSON
+#   2. 图片上传 R2（含写后校验：逐张 GET 公网 URL，要求 200 + image/*）
+#   3. 提交 edition 数据回仓库 → Cloudflare Pages 监听到 push 自动构建上线
+#
+# 需要的 Secrets（仓库 Settings → Secrets and variables → Actions → New repository secret）：
+#   LLM_API_KEY         必填：LLM 接口 key（默认兼容 DeepSeek 接口）
+#   LLM_BASE_URL        可选：默认 https://api.deepseek.com
+#   LLM_MODEL           可选：默认 deepseek-chat
+#   R2_ENDPOINT         必填（R2 模式）：https://<account-id>.r2.cloudflarestorage.com
+#   R2_BUCKET           必填：bucket 名
+#   R2_PUBLIC_BASE_URL  必填：公网图片域名 https://img.example.com
+#   R2_ACCESS_KEY_ID    必填
+#   R2_SECRET_ACCESS_KEY 必填
+#
+# R2 备选：不设 R2_* secrets 也行——--upload-images 会报未启用而失败。
+#   此时删掉 .gitignore 里 `public/images/*.webp.b64` 那行，图片走 b64 进 git，
+#   并给"上传图片到 R2"这一步加 `continue-on-error: true`。
 
+name: 每日构建
+
+on:
+  schedule:
+    # 每天 21:30 UTC = 北京时间次日 05:30。按自己时区改（cron 只能用 UTC）。
+    - cron: '30 21 * * *'
+  workflow_dispatch: # 允许手动点 Run workflow 立刻跑一次
+
+jobs:
+  build:
+    # 模板仓库本身没配 secret，不跑；用户配好 LLM_API_KEY 后自动生效
+    if: ${{ secrets.LLM_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 需要 push edition 数据回仓库
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: 抓取 + LLM 编辑 + 本地图片
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+        run: node pipeline/run.js
+        # 日期按 site.json 的 timezone 自动算，不用传 --date
+
+      - name: 上传图片到 R2（含写后校验）
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: node pipeline/run.js --upload-images
+        # 校验失败（缺图/公网不可访问）退出码非 0，job 标红，不会提交半成品
+
+      - name: QA 检查
+        run: npm test
+
+      - name: 提交 edition 数据
+        run: |
+          git config user.name "newsforge-bot"
+          git config user.email "newsforge-bot@users.noreply.github.com"
+          git add data/editions/ data/image-dims.json
+          git diff --cached --quiet || git commit -m "daily: $(date -u +%F)"
+          git push
+      # push 后 Cloudflare Pages 自动构建（构建命令只渲染不抓取，见 README）
