@@ -32,8 +32,24 @@ const args = Object.fromEntries(
 );
 const SKIP_LLM = !!args['skip-llm'];
 const SKIP_GDELT = !!args['skip-gdelt']; // GDELT 限流严重时跳过
-// 北京时间日期
-const TODAY = args.date || new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+
+// site.json → site.timezone（IANA，如 Asia/Shanghai）决定的"今天"。
+// 用 Intl 算出该时区此刻相对 UTC 的偏移，保证本机、CI、Cloudflare Pages 三处日期一致。
+function tzOffsetAt(t) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone: SITE.timezone || 'Asia/Shanghai', hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const p = Object.fromEntries(dtf.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+    const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+    return asUTC - t;
+  } catch {
+    return 8 * 3600 * 1000; // 时区名非法时回退北京时间
+  }
+}
+const TODAY = args.date || new Date(Date.now() + tzOffsetAt(Date.now())).toISOString().slice(0, 10);
 
 const UA = { 'User-Agent': 'NewsforgeBot/0.1' };
 // 个别站点（如 CBC）直接拒绝机器人 UA，连接会被重置；这些域名改用浏览器 UA 抓取
@@ -60,12 +76,16 @@ function isSafeUrl(u) {
 
 // ---------------- 抓取 ----------------
 async function fetchText(url, timeoutMs = 25000) {
+  const MAX_BODY = 5 * 1024 * 1024; // 响应体上限 5MB：防单个源返回超大文件拖慢构建
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, { headers: headersFor(url), signal: ctrl.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const len = res.headers.get('content-length');
+    if (len && +len > MAX_BODY) throw new Error(`响应体过大 (${len} bytes)`);
     const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_BODY) throw new Error(`响应体过大 (${buf.length} bytes)`);
     // 编码嗅探（2026-10-09）：部分中文站（汽车之家）用 GBK，res.text() 默认 UTF-8 会乱码
     let charset = 'utf-8';
     const ct = res.headers.get('content-type') || '';
@@ -572,17 +592,19 @@ async function callLLM(section, items) {
         `${i + 1}. ${it.title}\n   来源: ${it.source}${it.supplement ? ' [补充源·相关度可能较低]' : ''} | 时间: ${it.publishedAt || '未知'} | 链接: ${it.url}`,
     )
     .join('\n');
+  const audience = SITE.audience ? `（面向${SITE.audience}）` : '';
+  const headlineRule = section.editorial?.headlineRule
+    ? `   头条权重规则（模块自定义，最高优先级）：${section.editorial.headlineRule}\n`
+    : '';
   const prompt =
-    `你是 Newsforge 资讯站（面向中国大陆读者）的编辑。以下是「${section.name}」板块过去约 24 小时抓到的候选资讯。\n` +
+    `你是 Newsforge 资讯站${audience}的编辑。以下是「${section.name}」板块过去约 24 小时抓到的候选资讯。\n` +
     `请完成：\n` +
     `1. 选出 1 条头条 + 最多 5 条次条。标准：对读者最有用的"窗口 / 机会 / 重大变化"（板块定位：${section.desc}）。\n` +
     `   头条 48 小时规则：头条必须是 48 小时内发布的最新重要新闻；无够格头条则该板块隐藏（hidden:true）。\n` +
     `   信源要求：优先选择有多家媒体报道的新闻（至少两个独立信源）；实在只有一个信源也可收，但不要硬凑。\n   可信度权重（2026-10-07）：单信源且明确标注“未经证实/待确认”的新闻，可信度最低。头条不得选未证实新闻（无更优选项时宁可 hidden）；次条中未证实新闻排在已证实之后。JSON 里给每条加 "unverified": true/false。\n` +
     `   补充源降级：标注 [补充源] 的候选来自 GDELT 全网抓取或 Mastodon 趋势热榜，相关度噪音较大；主力源有够格条目时优先选主力源，补充源仅作备选。\n` +
     `   重要度：头条和次条都打 hot 标记（true=真正的热点才打，不要滥用）。\n` +
-    (section.id === 'world'
-      ? `   头条权重规则（最高优先级）：涉及中国敏感政治议题与人权争议的国际报道，候选中一旦出现即优先选为头条。\n`
-      : '') +
+    headlineRule +
     `2. 标题译成简体中文；头条写 200 字以内中文摘要 + 一句编辑点评；次条写 15 字以内中文一句话摘要。\n` +
     `   摘要要求：不说空话套话（如"作为目前最主流的"）；必须包含一句话背景 + 这件事为什么重要。\n` +
     `   点评要求：给出实质判断，不做因果跳跃（不许拿个案推普遍规律），不押韵、不凑数；没什么可说的就写事实延伸。\n` +
@@ -640,15 +662,21 @@ function listEditions() {
     .sort();
 }
 
-// 无时区的时间字符串一律按北京时间(+08:00)解析。
+// 无时区的时间字符串一律按 site.json 的 timezone 解析。
 // 根因（2026-10-08）：`new Date("2026-10-07T21:21:35")` 这类 naive 时间按本地时区解析，
 // 本机是 Asia/Shanghai 而 Cloudflare Pages 是 UTC，导致两边次条排序/新鲜度判断不一致。
-// 全站统一按北京时间解释，保证本地渲染与线上构建结果一致。
+// 全站统一按配置时区解释，保证本地渲染与线上构建结果一致。
 function parseTime(s) {
   if (!s) return NaN;
   const str = String(s).trim();
   if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(str)) {
-    return new Date(str.replace(' ', 'T') + '+08:00').getTime();
+    const guess = Date.parse(str.replace(' ', 'T') + 'Z');
+    const off = tzOffsetAt(isNaN(guess) ? Date.now() : guess);
+    const sign = off < 0 ? '-' : '+';
+    const abs = Math.abs(off);
+    const hh = String(Math.floor(abs / 3600000)).padStart(2, '0');
+    const mm = String(Math.floor((abs % 3600000) / 60000)).padStart(2, '0');
+    return new Date(str.replace(' ', 'T') + `${sign}${hh}:${mm}`).getTime();
   }
   return new Date(str).getTime();
 }
@@ -737,7 +765,7 @@ function fmtDate(iso) {
   if (!iso) return '日期未知';
   const t = parseTime(iso);
   if (isNaN(t)) return '日期未知';
-  return new Date(t + 8 * 3600 * 1000).toISOString().slice(0, 10);
+  return new Date(t + tzOffsetAt(t)).toISOString().slice(0, 10);
 }
 function dateBadge(iso) {
   const stale = isStale(iso);
