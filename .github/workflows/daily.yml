@@ -18,6 +18,9 @@
 # R2 备选：不设 R2_* secrets 也行——--upload-images 会报未启用而失败。
 #   此时删掉 .gitignore 里 `public/images/*.webp.b64` 那行，图片走 b64 进 git，
 #   并给"上传图片到 R2"这一步加 `continue-on-error: true`。
+#
+# 没配 LLM_API_KEY 时的表现：job 照常跑完、第一步直接绿灯跳过（不是报错），
+# 配好 secret 后下一次定时/手动触发自动生效。不再出现 "No jobs were run" 红叉。
 
 name: 每日构建
 
@@ -29,22 +32,34 @@ on:
 
 jobs:
   build:
-    # 模板仓库本身没配 secret，不跑；用户配好 LLM_API_KEY 后自动生效
-    if: ${{ secrets.LLM_API_KEY != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write # 需要 push edition 数据回仓库
     steps:
+      - name: 检查 Secrets（未配置则绿灯跳过）
+        id: gate
+        run: |
+          if [ -z "${{ secrets.LLM_API_KEY }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::未配置 LLM_API_KEY，跳过本次构建（模板默认行为，不是错误）"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 20
           cache: npm
 
       - run: npm ci
+        if: steps.gate.outputs.enabled == 'true'
 
       - name: 抓取 + LLM 编辑 + 本地图片
+        if: steps.gate.outputs.enabled == 'true'
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
@@ -53,6 +68,7 @@ jobs:
         # 日期按 site.json 的 timezone 自动算，不用传 --date
 
       - name: 上传图片到 R2（含写后校验）
+        if: steps.gate.outputs.enabled == 'true'
         env:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
@@ -63,9 +79,11 @@ jobs:
         # 校验失败（缺图/公网不可访问）退出码非 0，job 标红，不会提交半成品
 
       - name: QA 检查
+        if: steps.gate.outputs.enabled == 'true'
         run: npm test
 
       - name: 提交 edition 数据
+        if: steps.gate.outputs.enabled == 'true'
         run: |
           git config user.name "newsforge-bot"
           git config user.email "newsforge-bot@users.noreply.github.com"
