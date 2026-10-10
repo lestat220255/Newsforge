@@ -3,7 +3,9 @@
 //
 // 启用条件（安装时由 Agent 按 docs/R2-IMAGES.md 引导用户，二选一）：
 //   1. site.json 里 features.r2.enabled = true
-//   2. R2 配置文件存在（默认 ~/.config/newsforge/r2.json，600 权限；可用 R2_CONFIG 环境变量改路径）
+//   2. 凭证二选一：~/.config/newsforge/r2.json（600 权限，可用 R2_CONFIG 改路径）
+//      或环境变量 R2_ENDPOINT / R2_BUCKET / R2_PUBLIC_BASE_URL / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
+//      （字段级合并，环境变量优先；路径 B 的 GitHub Actions 直接用 env）
 // 配置内容：{ "endpoint", "bucket", "publicBaseUrl", "accessKeyId", "secretAccessKey" }
 //   endpoint 如 https://<account-id>.r2.cloudflarestorage.com（S3 API 地址，去掉末尾的 /<bucket>）
 //   publicBaseUrl 如 https://img.example.com（自定义域名，推荐）或 https://<id>.r2.dev
@@ -23,8 +25,8 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { ProxyAgent } from 'proxy-agent';
 import sharp from 'sharp';
-import { ROOT, DATA_DIR, EDITIONS_DIR } from './utils.js';
-import { FEATURES } from '../site-config.js';
+import { ROOT, DATA_DIR, EDITIONS_DIR, tzOffsetAt } from './utils.js';
+import { FEATURES, SITE } from '../site-config.js';
 
 const IMG_DIR = join(ROOT, 'public', 'images');
 const DIMS_PATH = join(DATA_DIR, 'image-dims.json');
@@ -46,14 +48,34 @@ export function isR2Enabled() {
 
 export function r2Status() {
   if (!FEATURES?.r2?.enabled) return { enabled: false, reason: 'site.json features.r2.enabled 未开启' };
-  if (!existsSync(CONFIG_PATH)) return { enabled: false, reason: `缺少 R2 配置 ${CONFIG_PATH}（见 docs/R2-IMAGES.md）` };
-  return { enabled: true };
+  if (hasEnvCreds() || existsSync(CONFIG_PATH)) return { enabled: true };
+  return { enabled: false, reason: `缺少 R2 配置：${CONFIG_PATH} 文件或 R2_* 环境变量（见 docs/R2-IMAGES.md）` };
+}
+
+// 环境变量凭证（路径 B：GitHub Actions 无人值守，CI 里直接设 secret）
+// R2_ENDPOINT / R2_BUCKET / R2_PUBLIC_BASE_URL / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
+function hasEnvCreds() {
+  return !!(
+    process.env.R2_ENDPOINT &&
+    process.env.R2_BUCKET &&
+    process.env.R2_PUBLIC_BASE_URL &&
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY
+  );
 }
 
 export function loadR2Config() {
   const st = r2Status();
   if (!st.enabled) throw new Error(st.reason);
-  const cfg = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+  // 字段级合并：环境变量优先于文件（CI 只设 env，本地只用文件，两者可混用）
+  const file = existsSync(CONFIG_PATH) ? JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) : {};
+  const cfg = {
+    endpoint: process.env.R2_ENDPOINT || file.endpoint,
+    bucket: process.env.R2_BUCKET || file.bucket,
+    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL || file.publicBaseUrl,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || file.accessKeyId,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || file.secretAccessKey,
+  };
   for (const k of ['endpoint', 'bucket', 'publicBaseUrl', 'accessKeyId', 'secretAccessKey']) {
     if (!cfg[k] || /PLACEHOLDER/i.test(cfg[k])) throw new Error(`R2 配置缺字段或为占位值: ${k}`);
   }
@@ -264,7 +286,9 @@ async function main() {
     return;
   }
   if (args.upload) {
-    const date = args.date || new Date().toISOString().slice(0, 10);
+    // 默认日期按站点时区（site.json timezone），不用 UTC，避免跨天错日期
+    const tz = SITE.timezone || 'Asia/Shanghai';
+    const date = args.date || new Date(Date.now() + tzOffsetAt(tz, Date.now())).toISOString().slice(0, 10);
     const { uploaded, missing } = await uploadEditionImages(date);
     console.log(`[r2] 上传 ${uploaded.length} 张，缺失 ${missing.length} 张`);
     if (missing.length) process.exitCode = 2;

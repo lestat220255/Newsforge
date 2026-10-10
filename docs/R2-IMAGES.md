@@ -61,6 +61,8 @@ Newsforge 的图片有两种策略，安装时由 Agent 问用户确认（**默�
 
 ### 第 5 步：你配置（🤖）
 
+**路径 A（Agent 本机运行，默认）**：写配置文件
+
 ```bash
 cat > ~/.config/newsforge/r2.json <<'EOF'
 {
@@ -73,6 +75,15 @@ cat > ~/.config/newsforge/r2.json <<'EOF'
 EOF
 chmod 600 ~/.config/newsforge/r2.json
 ```
+
+**路径 B（GitHub Actions 无人值守）**：CI 里设 5 个 secret 环境变量即可，不用写文件
+
+```
+R2_ENDPOINT / R2_BUCKET / R2_PUBLIC_BASE_URL / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
+```
+
+字段级合并：**环境变量优先于配置文件**，两者可混用（比如 endpoint 放文件、key 走 env）。
+可用 `R2_CONFIG` 环境变量改配置文件路径。
 
 然后 `site.json` 里开开关：
 
