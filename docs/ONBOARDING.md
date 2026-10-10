@@ -118,7 +118,8 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
    - 注意：构建时只渲染已推送的 edition，不抓取（抓取是定时任务里做的，见第 10 步）
 4. ✋ 先推送第 6 步生成的 edition 数据到 GitHub（`data/editions/` + 图片 b64 或 R2 已上传），再点 Deploy
 5. 🤖 你 curl 新站点的 URL：确认 HTTP 200、标题是用户的网站名、**首页有第 6 步的内容**（不是空站）
-6. 如果第 1 步用户要了自定义域名：✋ 指引用户在 Pages 项目里 Custom domains → Set up a custom domain，按 Cloudflare 的提示加 DNS 记录
+6. 🤖 **首日 Telegram 推送**：如果第 4 步用户配置了 Telegram 频道，部署成功后**把首日所有头条推送到频道**（每条一条消息：标题 + 一句话摘要 + 详情页链接）。这是频道的开张第一推，别让频道空着上线
+7. 如果第 1 步用户要了自定义域名：✋ 指引用户在 Pages 项目里 Custom domains → Set up a custom domain，按 Cloudflare 的提示加 DNS 记录
 
 ### 图片策略（🤖 自动询问式 + ✋ 手动创建，默认 R2）
 
