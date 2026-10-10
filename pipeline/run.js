@@ -64,9 +64,13 @@ async function main() {
       console.error(`[r2] 未启用：${st.reason}`);
       process.exit(1);
     }
-    const { uploaded, missing } = await uploadEditionImages(TODAY);
+    const { uploaded, missing, failed } = await uploadEditionImages(TODAY);
     if (missing.length) {
       console.error(`[r2] ${missing.length} 张图片缺失，不继续发布`);
+      process.exit(2);
+    }
+    if (failed.length) {
+      console.error(`[r2] ${failed.length} 张图片公网校验失败，不继续发布`);
       process.exit(2);
     }
     console.log(`[r2] 上传 ${uploaded.length} 张，重渲染中…`);

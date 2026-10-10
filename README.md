@@ -77,7 +77,7 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 1. 登录 [dash.cloudflare.com](https://dash.cloudflare.com) → 左侧 **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
 2. 按提示授权 GitHub，选中你第二阶段建的仓库，点 **Begin setup**
 3. 构建配置（照抄）：
-   - 构建命令：`npm install && node pipeline/run.js --render-only && npx --yes pagefind --site dist`
+   - 构建命令：`npm install && node pipeline/run.js --render-only && npx pagefind --site dist`
    - 输出目录：`dist`
    - 环境变量：点 **Add variable**，`NODE_VERSION` = `20`
 4. 点 **Save and Deploy**，等 1-2 分钟构建完成
@@ -118,6 +118,8 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 设置 `LLM_API_KEY`（及可选 `LLM_BASE_URL` / `LLM_MODEL`，默认兼容 DeepSeek 接口）后，
 `npm run build` 会走"抓取 → LLM 自动编辑 → 渲染"全自动流程，适合 GitHub Actions 无人值守运行。
 这条路径要花你自己的 API 费用，默认关闭；`--skip-llm` 可强制跳过。
+GitHub Actions 示例见 `.github/workflows/daily.yml`：在仓库 Settings → Secrets 里配好 `LLM_API_KEY` 和 `R2_*` 即可用，
+步骤顺序已锁死（抓取→LLM编辑→R2上传→提交 edition→Pages 自动构建），R2 上传带写后校验，失败会标红不提交半成品。
 
 ## 内容来源与署名
 

@@ -217,7 +217,29 @@ export async function uploadEditionImages(date) {
     saveDims(dims);
     console.log(`[r2] ${date} 改写 ${n} 处图片链接，dims 边车已更新`);
   }
-  return { uploaded, missing };
+  // 写后校验：每张图公网可访问才算成功（替代人工 curl）
+  const failed = await verifyUploaded(uploaded);
+  if (failed.length) console.error(`[r2] 校验失败 ${failed.length} 张: ${failed.join(', ')}`);
+  else if (uploaded.length) console.log(`[r2] 校验通过 ${uploaded.length} 张（200 + image/*）`);
+  return { uploaded, missing, failed };
+}
+
+// 写后校验：逐个 GET 公网 URL，要求 200 且 Content-Type 为图片
+async function verifyUploaded(urls) {
+  const failed = [];
+  for (const u of urls) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch(u, { signal: ctrl.signal });
+      clearTimeout(t);
+      const ct = res.headers.get('content-type') || '';
+      if (res.status !== 200 || !ct.startsWith('image/')) failed.push(`${u} (status=${res.status}, ct=${ct})`);
+    } catch (e) {
+      failed.push(`${u} (${e.message})`);
+    }
+  }
+  return failed;
 }
 
 // 全量回填：把 public/images/*.webp.b64 全部传 R2，老期数 edition 批量改写。幂等（同 key 覆盖）。
@@ -289,9 +311,9 @@ async function main() {
     // 默认日期按站点时区（site.json timezone），不用 UTC，避免跨天错日期
     const tz = SITE.timezone || 'Asia/Shanghai';
     const date = args.date || new Date(Date.now() + tzOffsetAt(tz, Date.now())).toISOString().slice(0, 10);
-    const { uploaded, missing } = await uploadEditionImages(date);
-    console.log(`[r2] 上传 ${uploaded.length} 张，缺失 ${missing.length} 张`);
-    if (missing.length) process.exitCode = 2;
+    const { uploaded, missing, failed } = await uploadEditionImages(date);
+    console.log(`[r2] 上传 ${uploaded.length} 张，缺失 ${missing.length} 张，校验失败 ${failed.length} 张`);
+    if (missing.length || failed.length) process.exitCode = 2;
     return;
   }
   console.log('用法: node pipeline/lib/r2-images.js --upload --date=YYYY-MM-DD | --backfill [--dry-run]');
