@@ -33,6 +33,8 @@ newsforge/
 - 头条配图：RSS 自带图 → og:image → 下载本地 → 限宽 800px + WebP + 去 EXIF + 单张 < 90KB
 - 图片以 `.webp.b64` 文本形式进 git（`public/images/*.webp` 二进制是 gitignore 的，Pages 构建时解码）
 - **体积警告**：图片进 git 会让仓库持续变大。保留策略：图片 90 天、candidates 7 天，过期自动清理并在推送时删除对应的 b64
+- **体积预算**：`npm test` 会检查 `public/images/*.b64` 总量，超 250MB 直接失败、挡住推送（正常 90 天滚动下约 160MB）
+- **诚实说明**：90 天清理只管工作区，不管 git 历史——历史里的图片 blob 永远在。按每天约 1MB 估算，3 年左右历史增量约 1GB（GitHub 开始警告的量级）。到那时有两个选择：① 把图片迁到 Cloudflare R2（同账号、免费额度够用，可配 90 天生命周期自动删，edition 里存 URL 不存 b64）；② 重写 git 历史（`git filter-repo`，会打断所有克隆）。别等到 5GB 硬上限才动手
 - og:image 可能是站标占位图（如含 logo/opg_/placeholder/default/avatar 字样）→ 跳过，无图比错图强
 - 上线前把图真正打开看一眼
 

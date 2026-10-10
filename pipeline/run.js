@@ -36,7 +36,7 @@ const args = Object.fromEntries(
 const SKIP_LLM = !!args['skip-llm'];
 const SKIP_GDELT = !!args['skip-gdelt']; // GDELT 限流严重时跳过
 
-const TODAY = args.date || new Date(Date.now() + tzOffsetAt(Date.now())).toISOString().slice(0, 10);
+const TODAY = args.date || new Date(Date.now() + tzOffsetAt(SITE.timezone, Date.now())).toISOString().slice(0, 10);
 
 async function main() {
   if (args['fetch-only']) {

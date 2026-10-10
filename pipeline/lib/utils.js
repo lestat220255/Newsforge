@@ -13,10 +13,11 @@ const EDITIONS_DIR = join(DATA_DIR, 'editions');
 
 // site.json → site.timezone（IANA，如 Asia/Shanghai）决定的"今天"。
 // 用 Intl 算出该时区此刻相对 UTC 的偏移，保证本机、CI、Cloudflare Pages 三处日期一致。
-function tzOffsetAt(t) {
+// tz: IANA 时区名（如 site.json 的 timezone）。签名与 probe-sources.js 的 tzOffsetMs(tz, t) 一致。
+function tzOffsetAt(tz, t) {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
-      timeZone: SITE.timezone || 'Asia/Shanghai', hour12: false,
+      timeZone: tz || 'Asia/Shanghai', hour12: false,
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit',
     });
@@ -140,7 +141,7 @@ function parseTime(s) {
     // 排序/新鲜度只差一小时，不影响日期，可接受。
     let t = asUTC;
     for (let i = 0; i < 2; i++) {
-      const t2 = asUTC - tzOffsetAt(t);
+      const t2 = asUTC - tzOffsetAt(SITE.timezone, t);
       if (t2 === t) break;
       t = t2;
     }
@@ -153,7 +154,7 @@ function fmtDate(iso) {
   if (!iso) return '日期未知';
   const t = parseTime(iso);
   if (isNaN(t)) return '日期未知';
-  return new Date(t + tzOffsetAt(t)).toISOString().slice(0, 10);
+  return new Date(t + tzOffsetAt(SITE.timezone, t)).toISOString().slice(0, 10);
 }
 
 function fmtDateCN(iso) {

@@ -60,6 +60,20 @@ try:
 except Exception as e:
     fail('config 加载', str(e)[:150])
 
+# ---------- 2b. 图片体积预算（b64 进 git 的膨胀刹车，不依赖 edition，放前面） ----------
+# 90 天清理把工作区稳定在 ~160MB；超过 250MB 说明清理没跑或图片过大，挡住推送人工看一眼
+IMG_BUDGET = 250 * 1024 * 1024
+img_total, img_n = 0, 0
+if os.path.isdir(PUBLIC_IMG):
+    for fn in os.listdir(PUBLIC_IMG):
+        if fn.endswith('.b64'):
+            img_n += 1
+            img_total += os.path.getsize(os.path.join(PUBLIC_IMG, fn))
+if img_total > IMG_BUDGET:
+    fail('图片体积预算', f'public/images 下 {img_n} 个 b64 共 {img_total/1048576:.0f}MB，超 250MB 预算：检查 pruneOldFiles 是否运行，或考虑把图片迁出 git（见 docs/SETUP.md 图片策略）')
+else:
+    ok(f'图片体积预算（{img_n} 个 b64，共 {img_total/1024:.0f}KB）')
+
 # ---------- 3. 最新 edition 结构与字数 ----------
 dates = sorted(f[:10] for f in os.listdir(EDITIONS) if re.match(r'\d{4}-\d{2}-\d{2}\.json$', f)) if os.path.isdir(EDITIONS) else []
 if not dates:
