@@ -65,21 +65,16 @@ github.com/XXX/XXX(替换为实际仓库地址)
 
 AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访问令牌：GitHub → Settings → Developer settings → Personal access tokens → 勾 `repo` 权限）——配好后推送全自动，不用每次点审批；不配的话每次推送你都要亲手点一次确认
 
-做完这步再进第三阶段。
+发完上面那段话，下面的路线图瞄一眼有个概念就行——具体每一步 AI 都会带你走。
 
-### 第三阶段：让 AI 帮你建站（约 30 分钟，全是选择题）
+### 接下来 30 分钟：AI 带你走完建站（你只管做选择题）
 
-剧本文件 `docs/ONBOARDING.md` 已经在你的仓库里，AI 会自己去读，你不用下载上传。直接在第二阶段半的对话里继续，AI 会按顺序问你（每题先给推荐，你只管选；每题都有"以上都不合适，我来填写"）：
+剧本文件 `docs/ONBOARDING.md` 已经在你的仓库里，AI 会自己去读。直接在第二阶段半的对话里继续，AI 会按顺序问你（每题先给推荐，你只管选；每题都有"以上都不合适，我来填写"）：
    - **网站基本信息**：先确认仓库地址和推送权限；再问叫什么名字？（先问内容方向再给建议）一句话介绍？联系邮箱（可跳过）？目标读者是谁（可多选）？你在哪个时区？有没有自己的域名？
    - **选模块**：AI 按你的意图推荐几个领域，你多选 + 可自定义；模板自带一个"赛博风向"示例模块照着抄
    - **定信源**：每个模块从哪抓？AI 会按领域推荐，你也可以指定（RSS、博客、论坛、官方文档都行）
    - **筛选要求**：有没有不想看的敏感话题？要不要 AI 点评 / AI 分析？加不加编辑原则（默认不加）？
-   - **图片存哪**：默认 **Cloudflare R2**（推荐，仓库不膨胀）；也可以选 b64 进 git（零配置）。选 R2 的话跟着走：
-     1. 你亲手在 Cloudflare 建 R2 bucket（`xxx-images`）
-     2. 开公网访问（正式站推荐绑自己的图片域名，如 `img.example.com`）
-     3. 建 API token（Object Read & Write，只限这个 bucket）——**Secret 只显示一次，当场复制**
-     4. 把 endpoint、bucket 名、公网地址、Access Key、Secret 发给 AI（直接发聊天里就行，它会立刻存进本机安全文件，不进仓库）
-     5. AI 冒烟测试传一张图、亲手打开看一眼，确认没问题
+   - **图片存哪**：默认 **Cloudflare R2**（推荐，仓库不膨胀）；也可以选 b64 进 git（零配置）。选 R2 的话 AI 会一步步教你：建 R2 bucket（`xxx-images`）→ 开公网访问（正式站推荐绑自己的图片域名）→ 建 API token（**Secret 只显示一次，当场复制发给 AI**，它会存进本机安全文件不进仓库）→ AI 冒烟测试传一张图、亲手打开确认
    - **Telegram 订阅**（可选，默认关）：要不要每天把头条推送到 Telegram 频道？要的话按指引找 @BotFather 建 bot
    - **主题风格**：喜欢浅色还是深色？（都支持，一键切换）配色、logo 按你的 taste 来，不套模板默认
    - **抓取策略**：默认每天抓一次，要不要调？
@@ -88,23 +83,13 @@ AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访
 
 然后 **AI 先抓一次真实内容**：按你的配置全量抓取 → 写摘要 → 本地生成第一版网站，截图给你确认。**没内容不部署**——如果抓不到，AI 会跟你一起调信源，直到有内容为止
 
-### 第四阶段：上线到 Cloudflare Pages（10 分钟，亲手做）
+### 上线：AI 会一步步教你弄 Cloudflare Pages（约 10 分钟）
 
-**前置条件**：第三阶段第 5 步已有真实内容并经你确认。部署的是有内容的网站，不是空站。
+前提是前面已有真实内容并经你确认——部署的是有内容的网站，不是空站。到时候 AI 会带着你点：登录 [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create → Pages → Connect to Git 选中你的仓库，构建配置照抄（`npm install && node pipeline/run.js --render-only && npx pagefind --site dist`，输出目录 `dist`，环境变量 `NODE_VERSION=20`），点 Save and Deploy，等 1-2 分钟，`xxx.pages.dev` 就上线了 🎉 想绑自己的域名 AI 也会教你。
 
-1. 登录 [dash.cloudflare.com](https://dash.cloudflare.com) → 左侧 **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-2. 按提示授权 GitHub，选中你第二阶段建的仓库，点 **Begin setup**
-3. 构建配置（照抄）：
-   - 构建命令：`npm install && node pipeline/run.js --render-only && npx pagefind --site dist`
-   - 输出目录：`dist`
-   - 环境变量：点 **Add variable**，`NODE_VERSION` = `20`
-4. 点 **Save and Deploy**，等 1-2 分钟构建完成
-5. 打开分配给你的 `xxx.pages.dev` 地址，网站上线了 🎉
-6. （可选）绑自己的域名：Pages 项目里 **Custom domains** → **Set up a custom domain**，按 Cloudflare 的提示去域名商加一条 DNS 记录
+### 定时任务：AI 帮你配好
 
-### 第五阶段：定时任务（AI 帮你建）
-
-回到和 AI 的对话，让它建 3 个定时任务（模板在 `crons/` 里，它会照着配）：
+AI 会在对话里帮你建 3 个定时任务（模板在 `crons/` 里）：
 
 | 任务 | 时间 | 做什么 |
 |---|---|---|
@@ -119,7 +104,7 @@ AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访
 
 为什么这样设计：AI 默认的 GitHub 授权每次推送都要你亲手点审批，**只有 PAT 能做到真正的无人值守**。不想每天被打扰就选全自动，配一次 PAT 一劳永逸。
 
-### 第六阶段：日常使用
+### 建好之后：每天早晨看汇报就行
 
 之后每天早晨，AI 会准时汇报："今日 X 个模块更新，Y 条新内容，头条是……"（全自动模式下网站已经更新完，这个汇报只是告诉你结果）。
 
