@@ -188,6 +188,65 @@ async function buildSection(section, prevSection, { today, skipLlm = false, skip
   };
 }
 
+// ---------------- 跨模块去重 ----------------
+
+// 标题归一化：去标点/空格/书名号，转小写
+function normTitle(t) {
+  return String(t || '').toLowerCase()
+    .replace(/[《》「」『』【】\[\]()（）\s\-_—–·.,，。！？!?:：；;、"“”'‘’]/g, '');
+}
+
+function titleBigrams(s) {
+  const set = new Set();
+  for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+  return set;
+}
+
+// 标题相似度：字符 bigram Jaccard。实测重复对 ~0.5，不相关 ~0，阈值 0.45
+// 短标题（<10 字）bigram 容易虚高，只判完全相等
+function titleSim(a, b) {
+  const na = normTitle(a), nb = normTitle(b);
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  if (na.length < 10 || nb.length < 10) return 0;
+  const sa = titleBigrams(na), sb = titleBigrams(nb);
+  let inter = 0;
+  for (const g of sa) if (sb.has(g)) inter++;
+  return inter / (sa.size + sb.size - inter);
+}
+
+// 跨模块去重（2026-10-11）：同一期不同模块标题相似度超阈值，保留模块顺序靠前的，删除后面的。
+// 沿用/隐藏/空板块不参与（已是上一期内容）。头条被删时次条顶上，全空则标 empty。
+function dedupeAcrossModules(sections, threshold = 0.45) {
+  const seen = [];
+  let removed = 0;
+  for (const sec of sections) {
+    if (sec.hidden || sec.empty || sec.carried) continue;
+    const all = [
+      ...(sec.headline ? [{ e: sec.headline, h: true }] : []),
+      ...((sec.items || []).map((e) => ({ e, h: false }))),
+    ];
+    const kept = [];
+    for (const { e, h } of all) {
+      if (seen.some((t) => titleSim(t, e.title) >= threshold)) {
+        console.log(`[去重] [${sec.id}] "${String(e.title).slice(0, 24)}..." 与已收录重复，删除`);
+        removed++;
+        continue;
+      }
+      seen.push(e.title);
+      kept.push({ e, h });
+    }
+    const headlines = kept.filter((k) => k.h).map((k) => k.e);
+    const items = kept.filter((k) => !k.h).map((k) => k.e);
+    if (headlines.length === 0 && items.length > 0) headlines.push(items.shift());
+    sec.headline = headlines[0] || null;
+    sec.items = items;
+    if (!sec.headline && sec.items.length === 0) sec.empty = true;
+  }
+  if (removed > 0) console.log(`[去重] 本期跨模块删除 ${removed} 条重复`);
+  return sections;
+}
+
 // ---------------- 今日最值得看 ----------------
 
 // 确定性生成 dailyDigest.topPicks：只取 hot 头条、按配置条数、沿用/隐藏/空板块自动排除。
@@ -225,5 +284,5 @@ function buildDailyDigest(sections, today) {
 // ---------------- 渲染 ----------------
 
 export {
-  callLLM, fallbackPick, listEditions, loadEdition, buildSection, buildDailyDigest,
+  callLLM, fallbackPick, listEditions, loadEdition, buildSection, buildDailyDigest, dedupeAcrossModules,
 };

@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { SECTIONS, SITE } from './site-config.js';
 import { tzOffsetAt, EDITIONS_DIR } from './lib/utils.js';
 import { fetchCandidates } from './lib/fetchers.js';
-import { buildSection, listEditions, loadEdition, buildDailyDigest } from './lib/edit.js';
+import { buildSection, listEditions, loadEdition, buildDailyDigest, dedupeAcrossModules } from './lib/edit.js';
 import { processEditionImages } from './lib/images.js';
 import { renderAll } from './lib/render.js';
 
@@ -94,6 +94,7 @@ async function main() {
   for (const sec of SECTIONS) {
     sections.push(await buildSection(sec, prevSections[sec.id], { today: TODAY, skipLlm: SKIP_LLM, skipGdelt: SKIP_GDELT }));
   }
+  dedupeAcrossModules(sections);
   const dailyDigest = buildDailyDigest(sections, TODAY);
   const edition = { date: TODAY, site: SITE.name, sections };
   if (dailyDigest) edition.dailyDigest = dailyDigest;
