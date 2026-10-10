@@ -64,6 +64,7 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 - 次条新鲜度：默认 72 小时以上的不要，是否调整？
 - **AI 点评**：头条下要不要一句话 AI 点评？（默认开，写入 `site.json` → `features.aiComment`）
 - **AI 分析**：每条新闻要不要 1-3 段 AI 分析 + 核心事实？（默认开，**更耗 token**，约多 30-50%；写入 `site.json` → `features.aiAnalysis`；关掉则详情页显示"暂无分析"）
+- **今日最值得看**：首页顶部要不要"今日最值得看"横带？（**默认开**，每天 3 条，只取 hot 头条，沿用/隐藏板块自动排除）要几条？（1-5 选数字，默认 3）写入 `site.json` → `features.topPicks`（`{enabled, count}`）
 - **编辑原则**（多选弹窗，**默认一个都不加**）：把 `docs/editorial-principles.md` 的 6 条用选项列出来让用户勾选，也可自定义补充。选中的 id 写入 `site.json` → `editorial.principles`，自定义写 `editorial.custom`。about 页的"编辑原则"栏和 LLM prompt 会按选中项动态生成。
 
 ## 第 4 步：Telegram 订阅（🤖 自动询问式 + ✋ 手动创建）
@@ -84,6 +85,7 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 
 - 通过模板的 CSS 变量覆盖配色（见 `docs/SETUP.md` 第 6 节），**不要直接改模板 HTML 结构**
 - logo/图标：如果用户有想法就按他的来；没有就用你推荐的极简几何方案先顶上（替换 `public/logo.png`，header 已默认包好首页链接，不用改模板）
+- **favicon**：logo 定稿后，**必须**从 `public/logo.png` 自动生成 `public/favicon.png`（取中心正方形 → 缩到 256×256，用 Python PIL 一行搞定）。**不许漏掉**——模板 5 处引用 `/favicon.png`，漏了就是默认图标穿帮
 - **首页布局**（用选项问，默认双列）：单列 / **双列** / 三列。写入 `site.json` → `site.layout`（`single`/`double`/`triple`）
 - **禁止**：直接套用模板自带的示例风格——示例只是占位，不是设计
 

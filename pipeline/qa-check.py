@@ -150,12 +150,20 @@ for sec in ed['sections']:
             ok(f'{sid} {label} keyFacts 合规')
 ok(f'{date} 结构与字数检查完成')
 
-# 26. dailyDigest（2026-10-09 起）：topPicks 只指向 hot 头条、≤3 条；oneLiner ≤40 字
+# 26. dailyDigest（2026-10-09 起）：topPicks 只指向 hot 头条、≤配置条数；oneLiner ≤40 字
 dd = ed.get('dailyDigest')
 if dd is not None:
+    max_picks = 3
+    try:
+        site_cfg = json.load(open('site.json'))
+        tp = site_cfg.get('features', {}).get('topPicks', {})
+        if isinstance(tp, dict) and tp.get('count'):
+            max_picks = min(max(int(tp['count']), 1), 5)
+    except Exception:
+        pass
     picks = dd.get('topPicks', [])
-    if not isinstance(picks, list) or len(picks) > 3:
-        fail(f'{date} dailyDigest topPicks 超 3 条', str(len(picks) if isinstance(picks, list) else '?'))
+    if not isinstance(picks, list) or len(picks) > max_picks:
+        fail(f'{date} dailyDigest topPicks 超 {max_picks} 条', str(len(picks) if isinstance(picks, list) else '?'))
     else:
         sec_by_id = {s['id']: s for s in ed['sections']}
         bad = []

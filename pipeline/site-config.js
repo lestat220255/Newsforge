@@ -48,6 +48,7 @@ export const FEATURES = {
   geoHide: false,          // 地域隐藏（需 Cloudflare Pages Function）
   aiComment: true,         // AI 点评：头条一句话点评
   aiAnalysis: true,        // AI 分析：每条 1-3 段分析 + keyFacts（更耗 token）
+  topPicks: { enabled: true, count: 3 }, // 今日最值得看：默认开，每天3条（1-5），只取 hot 头条
   ...raw.features,
 };
 

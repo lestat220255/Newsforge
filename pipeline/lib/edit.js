@@ -188,8 +188,42 @@ async function buildSection(section, prevSection, { today, skipLlm = false, skip
   };
 }
 
+// ---------------- 今日最值得看 ----------------
+
+// 确定性生成 dailyDigest.topPicks：只取 hot 头条、按配置条数、沿用/隐藏/空板块自动排除。
+// 不走 LLM——"值得看"的判断已编码在 hot 标记里，这里只做筛选组装，保证不遗漏。
+function buildDailyDigest(sections, today) {
+  const cfg = FEATURES.topPicks || {};
+  if (cfg.enabled === false) return null;
+  const count = Math.min(Math.max(parseInt(cfg.count, 10) || 3, 1), 5);
+  const picks = [];
+  let items = 0;
+  const sources = new Set();
+  for (const sec of sections) {
+    if (sec.hidden || sec.empty || sec.carried) continue;
+    const h = sec.headline;
+    if (h) {
+      items += 1 + (sec.items || []).length;
+      if (h.source) sources.add(h.source);
+      for (const it of sec.items || []) if (it.source) sources.add(it.source);
+      if (h.hot && picks.length < count) picks.push({ section: sec.id, index: 0 });
+    }
+  }
+  if (!picks.length) return null;
+  return {
+    issue: listEditions().length + 1,
+    dateLabel: today,
+    stats: {
+      items,
+      sources: sources.size,
+      readMinutes: Math.max(1, Math.round(items * 0.8)),
+    },
+    topPicks: picks,
+  };
+}
+
 // ---------------- 渲染 ----------------
 
 export {
-  callLLM, fallbackPick, listEditions, loadEdition, buildSection,
+  callLLM, fallbackPick, listEditions, loadEdition, buildSection, buildDailyDigest,
 };

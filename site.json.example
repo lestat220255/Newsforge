@@ -12,7 +12,11 @@
       "enabled": false
     },
     "aiComment": true,
-    "aiAnalysis": true
+    "aiAnalysis": true,
+    "topPicks": {
+      "enabled": true,
+      "count": 3
+    }
   },
   "site": {
     "contactEmail": "",
