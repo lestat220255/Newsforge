@@ -73,8 +73,11 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 
 - 选"不要" → `site.json` 里 `features.telegram.enabled=false`，跳过本步
 - 选"要" → 按顺序走：
-  1. ✋ 用户手动：找 @BotFather 创建 bot，拿到 token；创建一个频道，把 bot 拉进频道设为管理员
-     - 指引话术："打开 Telegram → 搜索 @BotFather → 发送 /newbot → 按提示起名字 → 它会给你一串 token，复制给我。**token 只发这一次，我存进本地安全文件，不会写进代码仓库。**"
+  1. ✋ 用户手动（一步步来，别跳过）：
+     - **建频道**：Telegram → 右上角 ✏️ → New Channel → 起名字（如"XX 每日速览"）→ 选 Public（公开频道，方便分享链接）→ 完成
+     - **建 Bot**：搜索 @BotFather → 发送 `/newbot` → 按提示起名字 → 它会给你一串 token，复制给我。**token 只发这一次，我存进本地安全文件，不会写进代码仓库。**
+     - **⚠️ 把 Bot 设为频道管理员（关键！不做这步推不出去）**：进频道 → 点频道名 → Administrators → Add Administrator → 搜你的 bot → 勾选 **Post Messages** 权限 → 保存
+     - **推荐：加一条欢迎消息**：在频道里发一条置顶消息，介绍这个频道是干什么的、每天几点更新，比如"每天 X 点推送今日最值得看的 N 条新闻"。读者点进频道第一眼看到的就是它
   2. 🤖 问用户：每天推送几点？（默认跟着网站更新时间走）
   3. 🤖 问用户：推送全部头条，还是只推标 🔥 的？
   4. 你把 token 存到 `~/.config/newsforge/telegram-token`（600 权限），**绝不进 git**
