@@ -63,10 +63,7 @@ github.com/XXX/XXX
 先验证一下你有没有这个仓库的推送权限；如果是私有仓库，请引导我配置 PAT（约 2 分钟）。
 ```
 
-说明：
-
-- 这段话交代了三件事：**你要干什么**（建新闻站）、**仓库在哪**、**按哪个文件干活**（ONBOARDING.md，直接从仓库读，不用你手动下载上传）。新会话的 AI 没有上下文，不说清楚它会一头雾水
-- AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访问令牌：GitHub → Settings → Developer settings → Personal access tokens → 勾 `repo` 权限）——配好后推送全自动，不用每次点审批；不配的话每次推送你都要亲手点一次确认
+AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访问令牌：GitHub → Settings → Developer settings → Personal access tokens → 勾 `repo` 权限）——配好后推送全自动，不用每次点审批；不配的话每次推送你都要亲手点一次确认
 
 做完这步再进第三阶段。
 
