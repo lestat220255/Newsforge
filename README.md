@@ -38,6 +38,18 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 - `docs/` — 写给 AI 助手看的安装剧本和手册（`ONBOARDING.md` 是入口）
 - `crons/` — 定时任务模板：每日构建、推送确认、信源健康检查
 
+## 两条运行路径（先看懂这个）
+
+**路径 A：AI 助手编辑（默认，零 API 成本）。**
+每天的抓取由 `npm run fetch`（=`node pipeline/run.js --fetch-only`）完成，
+编辑（选头条、写摘要点评）由你的 AI 助手按 `docs/SCRAPING.md` 和各模块 `editorial` 口径手工完成，
+最后 `npm run render` 生成静态页面。这是模板设计的默认路径，不调用任何付费 API。
+
+**路径 B：LLM API 自动编辑（备用）。**
+设置 `LLM_API_KEY`（及可选 `LLM_BASE_URL` / `LLM_MODEL`，默认兼容 DeepSeek 接口）后，
+`npm run build` 会走"抓取 → LLM 自动编辑 → 渲染"全自动流程，适合 GitHub Actions 无人值守运行。
+这条路径要花你自己的 API 费用，默认关闭；`--skip-llm` 可强制跳过。
+
 ## 协议
 
 MIT。拿去随便改，商用也行。

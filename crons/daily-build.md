@@ -5,7 +5,8 @@
 
 ## 步骤
 1. 确定今天日期（用户时区，见 `site.json` → `site.timezone`，格式 YYYY-MM-DD）。
-2. 跑 `npm run build`（=`node pipeline/run.js`）：抓取 `modules/*/module.json` 里定义的全部信源。
+2. 跑 `npm run fetch`（=`node pipeline/run.js --fetch-only`）：抓取 `modules/*/module.json` 里定义的全部信源，产出候选。
+   注意：`npm run build` 在**没有** `LLM_API_KEY` 时只渲染已有版本、不抓取（见 README「两条运行路径」）。
 3. AI 编辑（按各模块 `module.json` → `editorial` 口径 + `docs/SCRAPING.md` 策略）：
    - 每模块 1 头条 + 最多 5 条次条；头条须 48h 内最新，无够格则整版隐藏
    - 摘要铁律：每句话在原文有对应，找不到写"原文未提"；数字/人名/时间与原文一致

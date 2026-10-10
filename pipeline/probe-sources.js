@@ -141,8 +141,26 @@ function loadJson(p, fallback) {
   }
 }
 
-function beijingDate() {
-  return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+function siteDate() {
+  // 按 site.json → site.timezone 取"今天"，与 run.js 保持一致
+  try {
+    return new Date(Date.now() + tzOffsetMs(SITE.timezone || 'Asia/Shanghai', Date.now()))
+      .toISOString().slice(0, 10);
+  } catch {
+    return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  }
+}
+
+// site.json 的 timezone（IANA）在某时刻相对 UTC 的偏移毫秒
+function tzOffsetMs(tz, t) {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p = Object.fromEntries(dtf.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return asUTC - t;
 }
 
 function sendEmail(subject, body) {
@@ -166,7 +184,7 @@ function sendEmail(subject, body) {
 }
 
 async function main() {
-  const today = beijingDate();
+  const today = siteDate();
   // 收集待探测源
   const jobs = [];
   for (const sec of SECTIONS) {

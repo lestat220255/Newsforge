@@ -11,6 +11,17 @@
 | weblist | 无 RSS 的列表页，cheerio + CSS 选择器抓取 | 开 |
 | GDELT | 全球新闻数据库，**补充源**：主力候选不足 10 条时才启用，结果标 [补充源] | 开（降级） |
 | Mastodon 趋势 | `/api/v1/trends/links` 免认证，同 GDELT 降级机制 | 开（降级） |
+| v2ex | V2EX 节点 API（`node` 参数，如 `node_name=share`），社区帖子 | 关（按需） |
+| reddit | Reddit 子版块 JSON（`sub` 参数），需注意 429 限流 | 关（按需） |
+| govuk | 英国政府官网搜索（`query` 参数），官方政策源 | 关（按需） |
+| huggingface | HuggingFace 热门模型榜（开源/AI 模块用） | 关（按需） |
+| github | GitHub releases / trending（开源模块用） | 关（按需） |
+
+> 抓取 UA：默认 `NewsforgeBot/0.1`；`BROWSER_UA_HOSTS`（`pipeline/run.js`）里的域名
+> （如直接拒绝机器人 UA 的站点）会自动改用浏览器 UA。加新站时如果被 403/连接重置，
+> 先把域名加进这个集合再调选择器。
+
+抓取安全上限：单个响应体超过 **5MB** 直接丢弃（`fetchText` 内置），超时 25 秒（探针 20 秒）。
 
 ## 2. 新鲜度
 

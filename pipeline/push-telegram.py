@@ -12,11 +12,18 @@
   - 沿用（carried:true）板块不进订阅通知，只推当天新内容
   - 待确认（unverified）条目不带 🔥
 """
+import html
 import json
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 import urllib.request
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python < 3.9 回退
+    ZoneInfo = None
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -49,8 +56,13 @@ def main():
     if not tg.get('enabled') or not tg.get('channel'):
         print('Telegram 未启用（site.json → features.telegram），跳过推送')
         return
-    tz_hours = 8  # 默认北京时间；安装时按用户时区调整
-    tz = timezone(timedelta(hours=tz_hours))
+    # 时区一律读 site.json → site.timezone（IANA），不再写死 +8
+    tzname = site.get('timezone') or 'Asia/Shanghai'
+    if ZoneInfo:
+        tz = ZoneInfo(tzname)
+    else:
+        from datetime import timezone as _tz, timedelta as _td
+        tz = _tz(_td(hours=8))
     date = sys.argv[1] if len(sys.argv) > 1 else datetime.now(tz).strftime('%Y-%m-%d')
     ed_path = ROOT / f'data/editions/{date}.json'
     ed = json.loads(ed_path.read_text())
@@ -60,13 +72,14 @@ def main():
                 and not s.get('carried') and s.get('headline')]
 
     site_url = site['url'].rstrip('/')
-    lines = [f"<b>{site['name']} · {date}</b>", '']
+    lines = [f"<b>{html.escape(site['name'])} · {date}</b>", '']
     for s in sections:
         h = s['headline']
         hot = '🔥' if h.get('hot') and not h.get('unverified') else ''
-        link = f"{site_url}/detail/{s.get('detailDate') or date}/{s['id']}-0/"
-        lines.append(f"{hot}<b>{h['title']}</b>")
-        lines.append(f'<a href="{link}">阅读详情</a> · {h.get("source", "")}')
+        link = f"{site_url}/detail/{quote(s.get('detailDate') or date)}/{quote(s['id'])}-0/"
+        # parse_mode=HTML：标题/来源必须转义，否则含 < & 时发送失败或格式错乱
+        lines.append(f"{hot}<b>{html.escape(h['title'])}</b>")
+        lines.append(f'<a href="{html.escape(link, quote=True)}">阅读详情</a> · {html.escape(h.get("source", ""))}')
         lines.append('')
     mid = send(get_token(), '@' + tg['channel'], '\n'.join(lines).strip())
     print(f'头条推送成功 message_id={mid}，共 {len(sections)} 条')

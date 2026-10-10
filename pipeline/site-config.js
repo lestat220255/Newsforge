@@ -30,6 +30,7 @@ export const SITE = {
   name: 'My Site',
   url: 'https://example.pages.dev',
   tagline: '',
+  audience: '', // 目标读者（如"中文读者"），为空则 prompt 里不写受众限定
   language: 'zh-CN',
   timezone: 'Asia/Shanghai',
   contactEmail: '',

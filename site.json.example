@@ -13,6 +13,7 @@
     "disclaimer": "本站为个人兴趣聚合站，内容由 AI 自动抓取、翻译、摘要与点评，仅供参考；内容具有时效性，请注意甄别。",
     "language": "zh-CN",
     "name": "My Daily Digest",
+    "audience": "中文读者",
     "notifyEmail": "you@example.com",
     "tagline": "一句话介绍你的网站（会显示在首页标题下方和 RSS 描述里）",
     "timezone": "Asia/Shanghai",

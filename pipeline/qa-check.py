@@ -31,19 +31,23 @@ for script in ['pipeline/run.js', 'pipeline/probe-sources.js', 'pipeline/fetch-t
     else:
         fail(f'语法 {script}', r.stderr.decode()[:200])
 
-# ---------- 2. config.js 可加载、10 板块（2026-10-09：+汽车圈） ----------
+# ---------- 2. site-config.js 可加载、≥1 个模块 ----------
 r = subprocess.run(['node', '-e',
-    "import('./pipeline/config.js').then(m=>{console.log(JSON.stringify({n:m.SECTIONS.length,ids:m.SECTIONS.map(s=>s.id)}))})"],
+    "import('./pipeline/site-config.js').then(m=>{console.log(JSON.stringify({n:m.SECTIONS.length,ids:m.SECTIONS.map(s=>s.id),tz:m.SITE.timezone}))})"],
     cwd=ROOT, capture_output=True, text=True)
 try:
     cfg = json.loads(r.stdout.strip().splitlines()[-1])
-    if cfg['n'] == 10:
-        ok('config 10 板块')
+    if cfg['n'] >= 1:
+        ok(f"site-config {cfg['n']} 个模块")
     else:
-        fail('config 10 板块', f"实际 {cfg['n']}")
-    # 每个 source 有 name/type
+        fail('site-config 模块数', 'modules/ 下没有可用的 module.json')
+    if cfg.get('tz'):
+        ok(f"site-config 时区 {cfg['tz']}")
+    else:
+        fail('site-config 时区', 'SITE.timezone 缺失')
+    # 每个 source 有 name/type（全下划线开头的 key 是教学注释条目，跳过）
     r2 = subprocess.run(['node', '-e',
-        "import('./pipeline/config.js').then(m=>{const bad=[];for(const s of m.SECTIONS)for(const src of s.sources||[])if(!src.name||!src.type)bad.push(s.id);console.log(JSON.stringify(bad))})"],
+        "import('./pipeline/site-config.js').then(m=>{const bad=[];for(const s of m.SECTIONS)for(const src of s.sources||[]){if(Object.keys(src).every(k=>k.startsWith('_')))continue;if(!src.name||!src.type)bad.push(s.id)}console.log(JSON.stringify(bad))})"],
         cwd=ROOT, capture_output=True, text=True)
     bad = json.loads(r2.stdout.strip().splitlines()[-1])
     if not bad:
@@ -54,9 +58,23 @@ except Exception as e:
     fail('config 加载', str(e)[:150])
 
 # ---------- 3. 最新 edition 结构与字数 ----------
-dates = sorted(f[:10] for f in os.listdir(EDITIONS) if re.match(r'\d{4}-\d{2}-\d{2}\.json$', f))
-date = sys.argv[sys.argv.index('--date') + 1] if '--date' in sys.argv else dates[-1]
-ed = load_json(os.path.join(EDITIONS, f'{date}.json'))
+dates = sorted(f[:10] for f in os.listdir(EDITIONS) if re.match(r'\d{4}-\d{2}-\d{2}\.json$', f)) if os.path.isdir(EDITIONS) else []
+if not dates:
+    # 新站首次构建前 data/editions 为空：内容检查无从谈起，优雅跳过（不是失败）
+    ok('无 edition 数据，跳过内容检查（新站首次构建前正常）')
+    date = None
+    ed = None
+else:
+    date = sys.argv[sys.argv.index('--date') + 1] if '--date' in sys.argv else dates[-1]
+    ed = load_json(os.path.join(EDITIONS, f'{date}.json'))
+
+if ed is None:
+    # 新模板首次运行：只做了上面的配置与语法检查，直接出报告
+    print('\n===== QA 后端检查（无 edition，内容检查已跳过） =====')
+    print(f'通过 {len(passed)} / 失败 {len(failed)}')
+    for f in failed:
+        print('  FAIL:', f)
+    sys.exit(1 if failed else 0)
 
 HL_REQ = ['title', 'summary', 'comment', 'analysis', 'url', 'publishedAt', 'source']
 IT_REQ = ['title', 'blurb', 'summary', 'analysis', 'url', 'publishedAt', 'source']
@@ -189,9 +207,12 @@ if not dups:
 else:
     fail('详情页 URL 跨期无标题冲突', '; '.join(dups[:5]))
 
-# ---------- 7. 数据文件 ----------
+# ---------- 7. 数据文件（首次运行前不存在属正常） ----------
 for f in ['source-health.json', 'corrections.json']:
     p = os.path.join(DATA, f)
+    if not os.path.exists(p):
+        ok(f'data/{f} 不存在（首次运行前正常）')
+        continue
     try:
         load_json(p)
         ok(f'data/{f} 合法 JSON')
