@@ -33,16 +33,14 @@
   --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
   --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
   --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
-  --wm-a1:#1a3a5c; --wm-a2:#3d7dc4;
-  --shadow:0 4px 14px rgba(20,30,50,.12);
+--shadow:0 4px 14px rgba(20,30,50,.12);
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
   --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
   --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
-  --wm-a1:#8fc1f5; --wm-a2:#d4e6fb;
-  --shadow:0 4px 14px rgba(0,0,0,.4);
+--shadow:0 4px 14px rgba(0,0,0,.4);
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme]){
@@ -69,13 +67,11 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 :root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
 :root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
 
-/* 装饰标题样式（中性占位，见 docs/SETUP.md 第 6 节按沟通定制） */
-.wm-a{display:inline-flex;flex-direction:column;line-height:1;vertical-align:middle}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top" data-pagefind-ignore><h1><a href="/">← <span class="wm-a"><span class="w1">NEWSFORGE</span><span class="w2">DAILY</span></span></a></h1>
+  <header class="top" data-pagefind-ignore><h1><a href="/">← <span class="site-name">{{SITE_NAME}}</span></a></h1>
     <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
