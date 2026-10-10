@@ -1,0 +1,73 @@
+/* Newsforge 主题变量：全站唯一来源。改主题只改这里，7 个模板自动同步。 */
+:root{
+  color-scheme:dark;
+  /* 铁砧风格：炭黑底 + 金色强调（默认） */
+  --bg:#141417;
+  --surface:#1e1e23;
+  --surface2:#28282e;
+  --text:#f2f0ea;
+  --text2:#d6d1c6;
+  --muted:#9c978b;
+  --muted2:#7c776c;
+  --accent:#e8a33d;
+  --accent-hover:#f2b45c;
+  --accent-soft:rgba(232,163,61,.14);
+  --on-accent:#141417;
+  --border:#34343a;
+  --stale:#7c776c;
+  --stale-bg:#26262b;
+  --stale-border:#3a3a40;
+  --warn:#e8a33d;
+  --warn-bg:#2e2514;
+  --date-bg:#2a2113;
+  --date-text:#e8a33d;
+  --date-border:#4d3d1e;
+  --ext-border:#6b5a2e;
+  --ext-text:#d4a93c;
+  --ext-text-hover:#e8bc4f;
+  --ext-bg:rgba(232,163,61,.07);
+  --ext-bg-hover:rgba(232,163,61,.14);
+  --nav-bg:rgba(20,20,23,.88);
+  --comment-bg:rgba(232,163,61,.08);
+  --comment-border:#e8a33d;
+  --banner-bg:linear-gradient(135deg,#221c10,#28282e);
+  --banner-border:#3a3a40;
+  --logo-stroke:#e8a33d;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  /* 浅色主题 */
+  --bg:#faf8f2;
+  --surface:#ffffff;
+  --surface2:#f2eee4;
+  --text:#1c1a17;
+  --text2:#44403a;
+  --muted:#6e6a60;
+  --muted2:#8b867b;
+  --accent:#b57a1e;
+  --accent-hover:#c98f2c;
+  --accent-soft:rgba(181,122,30,.12);
+  --on-accent:#ffffff;
+  --border:#e3ddd0;
+  --stale:#8b867b;
+  --stale-bg:#eef0f4;
+  --stale-border:#d5dae3;
+  --warn:#b57a1e;
+  --warn-bg:#fdf3e0;
+  --date-bg:#fdf3e0;
+  --date-text:#b57a1e;
+  --date-border:#e8d5a8;
+  --ext-border:#c9a227;
+  --ext-text:#9a7b1a;
+  --ext-text-hover:#7a6114;
+  --ext-bg:rgba(201,162,39,.08);
+  --ext-bg-hover:rgba(201,162,39,.16);
+  --nav-bg:rgba(250,248,242,.88);
+  --comment-bg:rgba(181,122,30,.06);
+  --comment-border:#b57a1e;
+  --banner-bg:linear-gradient(90deg,#fdf9f1,#eee2c9);
+  --banner-border:#ddd0b8;
+  --logo-stroke:#b57a1e;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
+}
