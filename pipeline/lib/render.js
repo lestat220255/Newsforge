@@ -8,7 +8,7 @@ import { TOPICS, topicUrl, isValidTopic } from '../topics.js';
 import { preloadImgDims, imgWH, IMG_DIR } from './images.js';
 import { listEditions, loadEdition } from './edit.js';
 import {
-  HERE, ROOT, PIPELINE_DIR, DIST, DATA_DIR, EDITIONS_DIR, esc, googleSearchUrl, cleanComment,
+  HERE, ROOT, PIPELINE_DIR, DIST, DATA_DIR, EDITIONS_DIR, esc, googleSearchUrl, searchEngineLabel, cleanComment,
   fmtDate, fmtDateCN, dateBadge, detailUrl, entryDate, parseTime, rfc2822, shortTitle,
 } from './utils.js';
 
@@ -78,7 +78,7 @@ function renderSection(sec, date) {
       <h3><a href="${detailUrl(dDate, sec.id, 0)}">${hotMark(h)}${esc(h.title)}${trustBadges(h)}</a></h3>
       <p class="summary">${esc(h.summary)}</p>
       ${h.comment ? `<p class="comment">AI 点评：${esc(cleanComment(h.comment))}</p>` : ''}
-      <div class="meta">来源：${esc(sourceLine(h))} · <a href="${esc(h.url)}" target="_blank" rel="noopener" aria-label="阅读原文：${esc(h.title)}">阅读原文</a><button class="copy-btn" data-title="${esc(h.title)}" data-url="${esc(h.url)}" aria-label="复制标题和原文链接">复制</button><a class="search-btn" href="${esc(googleSearchUrl(h.title))}" target="_blank" rel="noopener" aria-label="在 Google 搜索此标题">搜索</a></div>
+      <div class="meta">来源：${esc(sourceLine(h))} · <a href="${esc(h.url)}" target="_blank" rel="noopener" aria-label="阅读原文：${esc(h.title)}">阅读原文</a><button class="copy-btn" data-title="${esc(h.title)}" data-url="${esc(h.url)}" aria-label="复制标题和原文链接">复制</button><a class="search-btn" href="${esc(googleSearchUrl(h.title))}" target="_blank" rel="noopener" aria-label="在 ${searchEngineLabel()} 搜索此标题">搜索</a></div>
     </article>`
     : '';
   const itemsHtml = (sec.items || [])
@@ -86,7 +86,7 @@ function renderSection(sec, date) {
       (it, i) => `<li${it.sensitive ? ' data-sensitive="1"' : ''}>${dateBadge(it.publishedAt)}
       <span class="t"><a href="${detailUrl(dDate, sec.id, i + 1)}">${hotMark(it)}${esc(it.title)}${trustBadges(it)}</a></span>
       <span class="b">${esc(it.blurb || it.desc || '')}</span>
-      <span class="s">${esc(it.source || '')}</span><button class="copy-btn" data-title="${esc(it.title)}" data-url="${esc(it.url)}" aria-label="复制标题和原文链接">复制</button><a class="search-btn" href="${esc(googleSearchUrl(it.title))}" target="_blank" rel="noopener" aria-label="在 Google 搜索此标题">搜索</a></li>`,
+      <span class="s">${esc(it.source || '')}</span><button class="copy-btn" data-title="${esc(it.title)}" data-url="${esc(it.url)}" aria-label="复制标题和原文链接">复制</button><a class="search-btn" href="${esc(googleSearchUrl(it.title))}" target="_blank" rel="noopener" aria-label="在 ${searchEngineLabel()} 搜索此标题">搜索</a></li>`,
     )
     .join('');
   return `<section id="${esc(sec.id)}" data-pagefind-body>
@@ -238,7 +238,7 @@ function renderDetail(tpl, ed, cur, prev, next, allArticles) {
       `</ul></section>`
     : '';
   const mainLink = `<li><a href="${esc(entry.url)}" target="_blank" rel="noopener">阅读原文：${esc(entry.title)}</a><span class="s">${esc(entry.source || '')}</span></li>`;
-  const searchLink = `<li><a href="${esc(googleSearchUrl(entry.title))}" target="_blank" rel="noopener">在 Google 搜索此标题</a><span class="s">看多方报道与 AI 总结</span></li>`;
+  const searchLink = `<li><a href="${esc(googleSearchUrl(entry.title))}" target="_blank" rel="noopener">在 ${searchEngineLabel()} 搜索此标题</a><span class="s">看多方报道与 AI 总结</span></li>`;
   // 相关往期报道：本站归档中同主题旧文（关键词匹配，同板块≥6分/跨板块≥8分）
   const related = findRelated({ ...cur, date: ed.date }, allArticles || []);
   const relatedHtml = related.length

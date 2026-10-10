@@ -16,7 +16,8 @@
     "topPicks": {
       "enabled": true,
       "count": 3
-    }
+    },
+    "searchEngine": "google"
   },
   "site": {
     "contactEmail": "",

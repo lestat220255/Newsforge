@@ -39,6 +39,8 @@ export const SITE = {
   notifyEmail: '',
   ...raw.site,
 };
+// URL 规范化：去尾斜杠，避免 canonical/og:url 出现双斜杠（SEO）
+SITE.url = String(SITE.url || '').replace(/\/+$/, '');
 
 // 功能开关（安装时逐项问用户）
 export const FEATURES = {
@@ -49,6 +51,7 @@ export const FEATURES = {
   aiComment: true,         // AI 点评：头条一句话点评
   aiAnalysis: true,        // AI 分析：每条 1-3 段分析 + keyFacts（更耗 token）
   topPicks: { enabled: true, count: 3 }, // 今日最值得看：默认开，每天3条（1-5），只取 hot 头条
+  searchEngine: 'google', // 一键搜索：google / bing / baidu / duckduckgo（大陆读者建议 baidu 或 bing）
   ...raw.features,
 };
 

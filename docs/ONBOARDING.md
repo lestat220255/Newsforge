@@ -39,6 +39,7 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 - 时区（默认 Asia/Shanghai）
 - 语言（默认 zh-CN）
 - 目标读者：**多选**（写入 `site.audience` 数组，如 `["中文读者", "游戏玩家"]`；AI 编辑 prompt 里会用"、"连接，不要写带立场的内容）
+  - 如果读者主要在中国大陆：**一键搜索默认换成百度或 Bing**（Google 打不开）。用选项问：Google / Bing / 百度 / DuckDuckGo，写入 `site.json` → `features.searchEngine`
 - 是否需要自定义域名？（默认否，直接用 `*.pages.dev` 子域名；要的话记下域名，第 7 步用）
 
 ## 第 2 步：选择模块（🤖 自动询问式）

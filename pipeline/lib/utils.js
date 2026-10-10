@@ -2,7 +2,7 @@
 // 被 fetchers / edit / images / render 共同依赖，不依赖它们（无循环引用）。
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SITE } from '../site-config.js';
+import { SITE, FEATURES } from '../site-config.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url)); // pipeline/lib
 const ROOT = join(HERE, '..', '..'); // 仓库根目录（lib 下了一层，多退一层）
@@ -118,10 +118,24 @@ function shortHash(str) {
 function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-// 一键搜索（2026-10-07）：标题全文直跳 Google 搜索，AI Overview 可给出多方说法对照
-
+// 一键搜索（2026-10-07）：标题全文直跳搜索引擎，可配置（大陆读者建议 baidu/bing）
+const SEARCH_URLS = {
+  google: 'https://www.google.com/search?q=',
+  bing: 'https://www.bing.com/search?q=',
+  baidu: 'https://www.baidu.com/s?wd=',
+  duckduckgo: 'https://duckduckgo.com/?q=',
+};
+const SEARCH_LABELS = { google: 'Google', bing: 'Bing', baidu: '百度', duckduckgo: 'DuckDuckGo' };
+function searchEngineName() {
+  const n = (FEATURES.searchEngine || 'google').toLowerCase();
+  return SEARCH_URLS[n] ? n : 'google';
+}
 function googleSearchUrl(title) {
-  return 'https://www.google.com/search?q=' + encodeURIComponent(String(title || ''));
+  // 保留旧名兼容，实际按 features.searchEngine 走
+  return SEARCH_URLS[searchEngineName()] + encodeURIComponent(String(title || ''));
+}
+function searchEngineLabel() {
+  return SEARCH_LABELS[searchEngineName()];
 }
 // 防御：comment 字段若已带"AI 点评："前缀则剥离，避免渲染时与模板前缀叠成"AI 点评：AI 点评："
 
@@ -228,7 +242,7 @@ export {
   HERE, ROOT, PIPELINE_DIR, DIST, DATA_DIR, EDITIONS_DIR,
   tzOffsetAt, sniffCharset, decodeBody,
   UA, BROWSER_UA, BROWSER_UA_HOSTS, headersFor, sleep, isSafeUrl, fetchText, toISO,
-  pLimit, shortHash, esc, googleSearchUrl, cleanComment,
+  pLimit, shortHash, esc, googleSearchUrl, searchEngineLabel, cleanComment,
   parseTime, isFresh, isStale, fmtDate, fmtDateCN, dateBadge, detailUrl, entryDate,
   rfc2822, shortTitle,
 };
