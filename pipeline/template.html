@@ -10,11 +10,11 @@
   try{
     var t = localStorage.getItem('newsforge-theme');
     if(t !== 'light' && t !== 'dark'){
-      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
     var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -41,57 +41,80 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="{{CANONICAL}}">
 <link href="/pagefind/pagefind-ui.css" rel="stylesheet">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
 
 :root{
-  color-scheme:light;
-  /* 浅色主题（默认） */
-  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
-  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
-  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
-  --stale:#9aa0ae; --stale-bg:#eef0f4; --stale-border:#d5dae3;
-  --warn:#b7791f; --warn-bg:#fdf3e0;
-  --date-bg:#e3f0fd; --date-text:#1668dc; --date-border:#bcd8f5;
-  --ext-border:#c9a227; --ext-text:#9a7b1a; --ext-text-hover:#7a6114;
-  --ext-bg:rgba(201,162,39,.08); --ext-bg-hover:rgba(201,162,39,.16);
-  --nav-bg:rgba(247,243,234,.88); --comment-bg:rgba(22,104,220,.06); --comment-border:#1668dc;
-  --banner-bg:linear-gradient(90deg,#fdf9f1,#eee2c9); --banner-border:#ddd0b8;
-  --logo-stroke:#1a3a5c;
---shadow:0 4px 14px rgba(20,30,50,.12);
-}
-:root[data-theme="dark"]{
   color-scheme:dark;
-  /* 深色主题 */
-  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
-  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
-  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
-  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
-  --warn:#e8b33d; --warn-bg:#3a2f14;
-  --date-bg:#0d2537; --date-text:#7cc4ff; --date-border:#1e4a6e;
-  --ext-border:#8a6d2f; --ext-text:#d4a93c; --ext-text-hover:#e8bc4f;
-  --ext-bg:rgba(200,162,74,.07); --ext-bg-hover:rgba(200,162,74,.14);
-  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
-  --banner-bg:linear-gradient(135deg,#1a2b45,#232f45); --banner-border:#2c3a52;
-  --logo-stroke:#7cc4ff;
---shadow:0 4px 14px rgba(0,0,0,.4);
-}
-@media (prefers-color-scheme:dark){
-  /* 无 JS 时跟随系统 */
-  :root:not([data-theme]){
-  color-scheme:dark;
-  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
-  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
-  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
-  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
-  --warn:#e8b33d; --warn-bg:#3a2f14;
-  --date-bg:#0d2537; --date-text:#7cc4ff; --date-border:#1e4a6e;
-  --ext-border:#8a6d2f; --ext-text:#d4a93c; --ext-text-hover:#e8bc4f;
-  --ext-bg:rgba(200,162,74,.07); --ext-bg-hover:rgba(200,162,74,.14);
-  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
-  --banner-bg:linear-gradient(135deg,#1a2b45,#232f45); --banner-border:#2c3a52;
+  /* 铁砧风格：炭黑底 + 金色强调（默认） */
+  --bg:#141417;
+  --surface:#1e1e23;
+  --surface2:#28282e;
+  --text:#f2f0ea;
+  --text2:#d6d1c6;
+  --muted:#9c978b;
+  --muted2:#7c776c;
+  --accent:#e8a33d;
+  --accent-hover:#f2b45c;
+  --accent-soft:rgba(232,163,61,.14);
+  --on-accent:#141417;
+  --border:#34343a;
+  --stale:#7c776c;
+  --stale-bg:#26262b;
+  --stale-border:#3a3a40;
+  --warn:#e8a33d;
+  --warn-bg:#2e2514;
+  --date-bg:#2a2113;
+  --date-text:#e8a33d;
+  --date-border:#4d3d1e;
+  --ext-border:#6b5a2e;
+  --ext-text:#d4a93c;
+  --ext-text-hover:#e8bc4f;
+  --ext-bg:rgba(232,163,61,.07);
+  --ext-bg-hover:rgba(232,163,61,.14);
+  --nav-bg:rgba(20,20,23,.88);
+  --comment-bg:rgba(232,163,61,.08);
+  --comment-border:#e8a33d;
+  --banner-bg:linear-gradient(135deg,#221c10,#28282e);
+  --banner-border:#3a3a40;
+  --logo-stroke:#e8a33d;
   --shadow:0 4px 14px rgba(0,0,0,.4);
-  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  /* 浅色主题 */
+  --bg:#faf8f2;
+  --surface:#ffffff;
+  --surface2:#f2eee4;
+  --text:#1c1a17;
+  --text2:#44403a;
+  --muted:#6e6a60;
+  --muted2:#8b867b;
+  --accent:#b57a1e;
+  --accent-hover:#c98f2c;
+  --accent-soft:rgba(181,122,30,.12);
+  --on-accent:#ffffff;
+  --border:#e3ddd0;
+  --stale:#8b867b;
+  --stale-bg:#eef0f4;
+  --stale-border:#d5dae3;
+  --warn:#b57a1e;
+  --warn-bg:#fdf3e0;
+  --date-bg:#fdf3e0;
+  --date-text:#b57a1e;
+  --date-border:#e8d5a8;
+  --ext-border:#c9a227;
+  --ext-text:#9a7b1a;
+  --ext-text-hover:#7a6114;
+  --ext-bg:rgba(201,162,39,.08);
+  --ext-bg-hover:rgba(201,162,39,.16);
+  --nav-bg:rgba(250,248,242,.88);
+  --comment-bg:rgba(181,122,30,.06);
+  --comment-border:#b57a1e;
+  --banner-bg:linear-gradient(90deg,#fdf9f1,#eee2c9);
+  --banner-border:#ddd0b8;
+  --logo-stroke:#b57a1e;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
@@ -237,9 +260,9 @@ ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
 .theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0;transition:border-color .15s,color .15s}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
 .theme-toggle svg{width:19px;height:19px}
-.theme-toggle .icon-sun{display:none}
-:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
-:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+.theme-toggle .icon-moon{display:none}
+:root[data-theme="light"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="light"] .theme-toggle .icon-moon{display:none}
 /* pagefind 搜索框跟随主题 */
 .pagefind-ui{--pagefind-ui-primary:var(--accent);--pagefind-ui-text:var(--text);--pagefind-ui-background:var(--surface);--pagefind-ui-border:var(--border);--pagefind-ui-tag:var(--surface2);--pagefind-ui-font:inherit}
 
@@ -393,7 +416,7 @@ window.addEventListener('DOMContentLoaded', function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
   var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
   applyMeta(init); applyLabel(init);
@@ -405,48 +428,6 @@ window.addEventListener('DOMContentLoaded', function(){
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
       applyMeta(next); applyLabel(next);
     });
-  }
-  /* 未手动选择时，系统主题变化则跟随 */
-  try{
-    var mq = window.matchMedia('(prefers-color-scheme: dark)');
-    var onChange = function(e){
-      try{
-        if(!localStorage.getItem('newsforge-theme')){
-          var t = e.matches ? 'dark' : 'light';
-          root.setAttribute('data-theme', t);
-          applyMeta(t); applyLabel(t);
-        }
-      }catch(err){}
-    };
-    if(mq.addEventListener) mq.addEventListener('change', onChange);
-    else if(mq.addListener) mq.addListener(onChange);
-  }catch(e){}
-})();
-</script>
-<script>
-/* 地域内容过滤：CN IP 隐藏敏感内容（2026-10-06，A方案：防随手访客） */
-(function(){
-  function hideSensitive(){
-    var sens = document.querySelectorAll('[data-sensitive="1"]');
-    if(!sens.length) return;
-    sens.forEach(function(el){ el.style.display = 'none'; });
-    // 板块内无可见内容则隐藏整个板块 + 对应导航标签
-    document.querySelectorAll('main section[id]').forEach(function(sec){
-      var items = sec.querySelectorAll('article.headline, ul.secondary li');
-      if(!items.length) return;
-      var anyVisible = Array.prototype.some.call(items, function(el){ return el.style.display !== 'none'; });
-      if(!anyVisible){
-        sec.style.display = 'none';
-        var pill = document.querySelector('nav.sections a[href="#' + sec.id + '"]');
-        if(pill) pill.style.display = 'none';
-      }
-    });
-    /* 要览条：敏感条目隐藏后，若无可见条目则隐藏整个"今日最值得看"模块 */
-    var dp = document.querySelector('.digest-picks');
-    if(dp){
-      var anyPick = Array.prototype.some.call(dp.querySelectorAll('li'), function(el){ return el.style.display !== 'none'; });
-      if(!anyPick) dp.style.display = 'none';
-    }
   }
   try{
     fetch('/api/geo').then(function(r){ return r.json(); }).then(function(g){

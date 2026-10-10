@@ -9,11 +9,11 @@
   try{
     var t = localStorage.getItem('newsforge-theme');
     if(t !== 'light' && t !== 'dark'){
-      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
     var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -26,45 +26,63 @@
 <meta property="og:title" content="往期归档 · {{SITE_NAME}}">
 <meta property="og:description" content="{{TAGLINE}}">
 <meta property="og:url" content="{{SITE_URL}}/archive/">
-<meta property="og:image" content="{{SITE_URL}}/favicon.svg">
+<meta property="og:image" content="{{SITE_URL}}/favicon.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="{{SITE_URL}}/archive/">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
 
 :root{
-  color-scheme:light;
-  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
-  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
-  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
-  --stale:#9aa0ae; --stale-bg:#eef0f4; --stale-border:#d5dae3;
-  --warn:#b7791f; --warn-bg:#fdf3e0;
-  --nav-bg:rgba(247,243,234,.88); --comment-bg:rgba(22,104,220,.06); --comment-border:#1668dc;
-  --logo-stroke:#1a3a5c;
---shadow:0 4px 14px rgba(20,30,50,.12);
-}
-:root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
-  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
-  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
-  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
-  --warn:#e8b33d; --warn-bg:#3a2f14;
-  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
-  --logo-stroke:#7cc4ff;
---shadow:0 4px 14px rgba(0,0,0,.4);
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme]){
-  color-scheme:dark;
-  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
-  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
-  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
-  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
-  --warn:#e8b33d; --warn-bg:#3a2f14;
-  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
+  /* 铁砧风格：炭黑底 + 金色强调（默认） */
+  --bg:#141417;
+  --surface:#1e1e23;
+  --surface2:#28282e;
+  --text:#f2f0ea;
+  --text2:#d6d1c6;
+  --muted:#9c978b;
+  --muted2:#7c776c;
+  --accent:#e8a33d;
+  --accent-hover:#f2b45c;
+  --accent-soft:rgba(232,163,61,.14);
+  --on-accent:#141417;
+  --border:#34343a;
+  --stale:#7c776c;
+  --stale-bg:#26262b;
+  --stale-border:#3a3a40;
+  --warn:#e8a33d;
+  --warn-bg:#2e2514;
+  --nav-bg:rgba(20,20,23,.88);
+  --comment-bg:rgba(232,163,61,.08);
+  --comment-border:#e8a33d;
+  --logo-stroke:#e8a33d;
   --shadow:0 4px 14px rgba(0,0,0,.4);
-  }
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  /* 浅色主题 */
+  --bg:#faf8f2;
+  --surface:#ffffff;
+  --surface2:#f2eee4;
+  --text:#1c1a17;
+  --text2:#44403a;
+  --muted:#6e6a60;
+  --muted2:#8b867b;
+  --accent:#b57a1e;
+  --accent-hover:#c98f2c;
+  --accent-soft:rgba(181,122,30,.12);
+  --on-accent:#ffffff;
+  --border:#e3ddd0;
+  --stale:#8b867b;
+  --stale-bg:#eef0f4;
+  --stale-border:#d5dae3;
+  --warn:#b57a1e;
+  --warn-bg:#fdf3e0;
+  --nav-bg:rgba(250,248,242,.88);
+  --comment-bg:rgba(181,122,30,.06);
+  --comment-border:#b57a1e;
+  --logo-stroke:#b57a1e;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
@@ -115,9 +133,9 @@ a{color:var(--accent)}
 .theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
 .theme-toggle svg{width:19px;height:19px}
-.theme-toggle .icon-sun{display:none}
-:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
-:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+.theme-toggle .icon-moon{display:none}
+:root[data-theme="light"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="light"] .theme-toggle .icon-moon{display:none}
 
 </style>
 </head>
@@ -148,7 +166,7 @@ a{color:var(--accent)}
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
   var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
   applyMeta(init); applyLabel(init);

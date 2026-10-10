@@ -9,11 +9,11 @@
   try{
     var t = localStorage.getItem('newsforge-theme');
     if(t !== 'light' && t !== 'dark'){
-      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
     var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -29,18 +29,38 @@
 <style>
 
 :root{
-  color-scheme:light;
-  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
-  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
-  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
-  --shadow:0 4px 14px rgba(20,30,50,.12);
-}
-:root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
-  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
-  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  /* 铁砧风格：炭黑底 + 金色强调（默认） */
+  --bg:#141417;
+  --surface:#1e1e23;
+  --surface2:#28282e;
+  --text:#f2f0ea;
+  --text2:#d6d1c6;
+  --muted:#9c978b;
+  --muted2:#7c776c;
+  --accent:#e8a33d;
+  --accent-hover:#f2b45c;
+  --accent-soft:rgba(232,163,61,.14);
+  --on-accent:#141417;
+  --border:#34343a;
   --shadow:0 4px 14px rgba(0,0,0,.4);
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  /* 浅色主题 */
+  --bg:#faf8f2;
+  --surface:#ffffff;
+  --surface2:#f2eee4;
+  --text:#1c1a17;
+  --text2:#44403a;
+  --muted:#6e6a60;
+  --muted2:#8b867b;
+  --accent:#b57a1e;
+  --accent-hover:#c98f2c;
+  --accent-soft:rgba(181,122,30,.12);
+  --on-accent:#ffffff;
+  --border:#e3ddd0;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
 }
 *{box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;line-height:1.75}
 .wrap{max-width:860px;margin:0 auto;padding:24px 20px}
@@ -58,9 +78,9 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color
 .theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
 .theme-toggle svg{width:17px;height:17px}
-.theme-toggle .icon-sun{display:none}
-:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
-:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+.theme-toggle .icon-moon{display:none}
+:root[data-theme="light"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="light"] .theme-toggle .icon-moon{display:none}
 </style>
 </head>
 <body>
@@ -84,7 +104,7 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
   var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   var init = root.getAttribute('data-theme') || 'light';
   applyMeta(init);
   if(btn){
