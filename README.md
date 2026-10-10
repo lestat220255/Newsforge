@@ -1,7 +1,7 @@
 # Newsforge
 
 <p align="center">
-  <img src="public/logo.svg" width="96" alt="Newsforge logo">
+  <img src="public/logo.png" width="96" alt="Newsforge logo">
 </p>
 
 用 AI 对话造一个**属于你自己的每日新闻站**。纯静态、零代码、零成本、零运维。
