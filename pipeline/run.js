@@ -18,6 +18,14 @@ import sharp from 'sharp';
 import { SECTIONS, SITE, FEATURES, SUPPLEMENT_MASTODON } from './site-config.js';
 import { TOPICS, topicUrl, isValidTopic } from './topics.js';
 
+// 启动时校验时区名：拼错立刻警告，不要静默回退
+try {
+  new Intl.DateTimeFormat('en-US', { timeZone: SITE.timezone || 'Asia/Shanghai' });
+} catch {
+  console.warn(`[warn] site.json 的 timezone "${SITE.timezone}" 非法，已回退为 Asia/Shanghai。请检查拼写（IANA 时区名，如 America/New_York）。`);
+  SITE.timezone = 'Asia/Shanghai';
+}
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const DIST = join(ROOT, 'dist');
@@ -84,8 +92,21 @@ async function fetchText(url, timeoutMs = 25000) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const len = res.headers.get('content-length');
     if (len && +len > MAX_BODY) throw new Error(`响应体过大 (${len} bytes)`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > MAX_BODY) throw new Error(`响应体过大 (${buf.length} bytes)`);
+    // 无 Content-Length 时边读边限流：超限立刻取消，不让超大响应一次性进内存
+    const chunks = [];
+    let total = 0;
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_BODY) {
+        reader.cancel();
+        throw new Error(`响应体过大 (>${MAX_BODY} bytes)`);
+      }
+      chunks.push(value);
+    }
+    const buf = Buffer.concat(chunks);
     // 编码嗅探（2026-10-09）：部分中文站（汽车之家）用 GBK，res.text() 默认 UTF-8 会乱码
     let charset = 'utf-8';
     const ct = res.headers.get('content-type') || '';
@@ -670,13 +691,19 @@ function parseTime(s) {
   if (!s) return NaN;
   const str = String(s).trim();
   if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(str)) {
-    const guess = Date.parse(str.replace(' ', 'T') + 'Z');
-    const off = tzOffsetAt(isNaN(guess) ? Date.now() : guess);
-    const sign = off < 0 ? '-' : '+';
-    const abs = Math.abs(off);
-    const hh = String(Math.floor(abs / 3600000)).padStart(2, '0');
-    const mm = String(Math.floor((abs % 3600000) / 60000)).padStart(2, '0');
-    return new Date(str.replace(' ', 'T') + `${sign}${hh}:${mm}`).getTime();
+    const local = str.replace(' ', 'T');
+    const asUTC = Date.parse(local + 'Z');
+    if (isNaN(asUTC)) return NaN;
+    // 定点迭代：T = L - offset(T)。先按 UTC 猜，再用该时刻的偏移修正，最多 2 轮。
+    // 已知局限：夏令时 fall-back 的重叠小时（同一本地时间出现两次）仍可能差一小时；
+    // 排序/新鲜度只差一小时，不影响日期，可接受。
+    let t = asUTC;
+    for (let i = 0; i < 2; i++) {
+      const t2 = asUTC - tzOffsetAt(t);
+      if (t2 === t) break;
+      t = t2;
+    }
+    return t;
   }
   return new Date(str).getTime();
 }

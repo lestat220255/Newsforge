@@ -59,7 +59,11 @@ def main():
     # 时区一律读 site.json → site.timezone（IANA），不再写死 +8
     tzname = site.get('timezone') or 'Asia/Shanghai'
     if ZoneInfo:
-        tz = ZoneInfo(tzname)
+        try:
+            tz = ZoneInfo(tzname)
+        except Exception:
+            print(f'[warn] site.json 的 timezone "{tzname}" 非法，已回退为 Asia/Shanghai。请检查拼写。')
+            tz = ZoneInfo('Asia/Shanghai')
     else:
         from datetime import timezone as _tz, timedelta as _td
         tz = _tz(_td(hours=8))

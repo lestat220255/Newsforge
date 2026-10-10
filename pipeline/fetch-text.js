@@ -23,7 +23,28 @@ async function main() {
       console.error(`HTTP ${res.status}`);
       process.exit(2);
     }
-    let buf = Buffer.from(await res.arrayBuffer());
+    // 响应体上限 5MB（与 run.js fetchText 一致）：无 Content-Length 时边读边限流
+    const MAX_BODY = 5 * 1024 * 1024;
+    const len = res.headers.get('content-length');
+    if (len && +len > MAX_BODY) {
+      console.error(`响应体过大 (${len} bytes)`);
+      process.exit(2);
+    }
+    const chunks = [];
+    let total = 0;
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_BODY) {
+        reader.cancel();
+        console.error(`响应体过大 (>${MAX_BODY} bytes)`);
+        process.exit(2);
+      }
+      chunks.push(value);
+    }
+    let buf = Buffer.concat(chunks);
     // 编码嗅探（2026-10-09）：部分中文站（汽车之家/车质网）用 GBK，res.text() 默认 UTF-8 会乱码
     let charset = 'utf-8';
     const ct = res.headers.get('content-type') || '';
