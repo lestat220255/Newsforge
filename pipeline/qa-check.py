@@ -23,17 +23,6 @@ def load_json(path):
     with open(path, encoding='utf-8') as f:
         return json.load(f)
 
-# R2 模式检测：site.json features.r2.enabled（图片走 R2，不进 git）
-def r2_enabled():
-    for p in (os.path.join(ROOT, 'site.json'), os.path.join(ROOT, 'site.json.example')):
-        try:
-            return bool(load_json(p).get('features', {}).get('r2', {}).get('enabled'))
-        except Exception:
-            continue
-    return False
-
-R2_MODE = r2_enabled()
-
 # ---------- 1. 脚本语法 ----------
 for script in ['pipeline/run.js', 'pipeline/site-config.js', 'pipeline/probe-sources.js',
                'pipeline/fetch-text.js', 'pipeline/topics.js',
@@ -71,22 +60,20 @@ try:
 except Exception as e:
     fail('config 加载', str(e)[:150])
 
-# ---------- 2b. 图片体积预算（仅 b64 模式；R2 模式图片不进 git，跳过） ----------
+# ---------- 2b. 图片体积预算（b64 进 git 的膨胀刹车，不依赖 edition，放前面） ----------
 # 90 天清理把工作区稳定在 ~160MB；超过 250MB 说明清理没跑或图片过大，挡住推送人工看一眼
+# R2 模式本地无 b64（或仅有未上传的临时文件），此项自然通过
 IMG_BUDGET = 250 * 1024 * 1024
 img_total, img_n = 0, 0
-if R2_MODE:
-    ok('图片体积预算（R2 模式，跳过）')
+if os.path.isdir(PUBLIC_IMG):
+    for fn in os.listdir(PUBLIC_IMG):
+        if fn.endswith('.b64'):
+            img_n += 1
+            img_total += os.path.getsize(os.path.join(PUBLIC_IMG, fn))
+if img_total > IMG_BUDGET:
+    fail('图片体积预算', f'public/images 下 {img_n} 个 b64 共 {img_total/1048576:.0f}MB，超 250MB 预算：检查 pruneOldFiles 是否运行，或迁到 R2（见 docs/R2-IMAGES.md）')
 else:
-    if os.path.isdir(PUBLIC_IMG):
-        for fn in os.listdir(PUBLIC_IMG):
-            if fn.endswith('.b64'):
-                img_n += 1
-                img_total += os.path.getsize(os.path.join(PUBLIC_IMG, fn))
-    if img_total > IMG_BUDGET:
-        fail('图片体积预算', f'public/images 下 {img_n} 个 b64 共 {img_total/1048576:.0f}MB，超 250MB 预算：检查 pruneOldFiles 是否运行，或考虑把图片迁出 git（见 docs/R2-IMAGES.md）')
-    else:
-        ok(f'图片体积预算（{img_n} 个 b64，共 {img_total/1024:.0f}KB）')
+    ok(f'图片体积预算（{img_n} 个 b64，共 {img_total/1024:.0f}KB）')
 
 # ---------- 3. 最新 edition 结构与字数 ----------
 dates = sorted(f[:10] for f in os.listdir(EDITIONS) if re.match(r'\d{4}-\d{2}-\d{2}\.json$', f)) if os.path.isdir(EDITIONS) else []
@@ -186,16 +173,15 @@ if dd is not None:
     else:
         ok(f'{date} dailyDigest oneLiner 合规')
 
-# ---------- 4. 图片对应 ----------
-# b64 模式：edition 图片字段必须有对应的本地 .b64
-# R2 模式：必须是 https 绝对 URL，且 key 在 data/image-dims.json 边车里（= 已上传；推送前另做逐个 curl 实测）
+# ---------- 4. 图片对应（按图判断，b64/R2 混存的过渡期也能处理） ----------
+# https 绝对 URL（R2）：必须在 data/image-dims.json 边车有记录（= 已上传；推送前另做逐个 curl 实测）
+# 本地 /images/ 路径（b64）：必须有对应的本地 .b64 文件
 missing = []
 dims = {}
-if R2_MODE:
-    try:
-        dims = load_json(os.path.join(DATA, 'image-dims.json'))
-    except Exception:
-        pass
+try:
+    dims = load_json(os.path.join(DATA, 'image-dims.json'))
+except Exception:
+    pass
 for sec in ed['sections']:
     imgs = []
     h = sec.get('headline') or {}
@@ -205,17 +191,15 @@ for sec in ed['sections']:
         if it.get('hot') and it.get('image'):
             imgs.append(it['image'])
     for im in imgs:
-        if R2_MODE:
-            if not (isinstance(im, str) and im.startswith('https://')):
-                missing.append(im + '（非绝对 URL）')
-            elif im not in dims:
+        if isinstance(im, str) and im.startswith('https://'):
+            if im not in dims:
                 missing.append(im + '（边车无记录）')
         else:
             p = os.path.join(ROOT, 'public' + im + '.b64')
             if not os.path.exists(p):
                 missing.append(im)
 if not missing:
-    ok('图片一一对应' + ('（R2）' if R2_MODE else '（b64）'))
+    ok('图片一一对应')
 else:
     fail('图片一一对应', '; '.join(missing[:5]))
 

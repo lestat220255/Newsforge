@@ -1,15 +1,16 @@
 # 图片存 Cloudflare R2（给 AI Agent 看 + 给用户看）
 
-Newsforge 的图片有两种策略，安装时由 Agent 问用户二选一：
+Newsforge 的图片有两种策略，安装时由 Agent 问用户确认（**默认 R2**，`site.json` 里 `features.r2.enabled=true`；
+未配好 R2 密钥前自动回退 b64 模式，不想用可关掉）：
 
-| | A. b64 进 git（默认） | B. Cloudflare R2（推荐） |
+| | A. b64 进 git | B. Cloudflare R2（**默认**） |
 |---|---|---|
 | 原理 | `.webp.b64` 文本进仓库，构建时解码 | 图片传 R2，edition 存公网 URL |
 | 仓库体积 | ~1MB/天，3 年约 1GB（git 历史只增不减） | 几乎零增长（只推 edition JSON） |
 | 运维 | 零额外操作 | 需建 bucket + token（一次） |
 | 适合 | 试水、图片少的小站 | 正式站、长期运营 |
 
-选 A 什么都不用做（默认流程）。选 B 按下面走。
+选 A（关掉 R2）什么都不用做。选 B 按下面走（默认即 B）。
 
 ---
 

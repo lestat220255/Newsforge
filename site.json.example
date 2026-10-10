@@ -4,8 +4,8 @@
     "geoHide": false,
     "qaChecks": true,
     "r2": {
-      "enabled": false,
-      "note": "图片存 Cloudflare R2（推荐，仓库不膨胀）：开启后按 docs/R2-IMAGES.md 引导用户建 bucket、配密钥"
+      "enabled": true,
+      "note": "图片存 Cloudflare R2（推荐，仓库几乎零增长）：默认开启，未配好密钥前自动回退 b64 模式；完整指南见 docs/R2-IMAGES.md，不想用可关掉"
     },
     "telegram": {
       "channel": "",

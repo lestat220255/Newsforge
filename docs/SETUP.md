@@ -30,9 +30,9 @@ newsforge/
 
 ## 4. 图片策略
 
-两种，二选一（安装时问用户，见 docs/ONBOARDING.md 第 5 步）：
+两种（安装时问用户，见 docs/ONBOARDING.md 第 5 步；**默认 R2**，未配好密钥前自动回退 b64）：
 
-**A. b64 进 git（默认，零额外操作）**
+**A. b64 进 git（零额外操作，可选）**
 
 - 头条配图：RSS 自带图 → og:image → 下载本地 → 限宽 800px + WebP + 去 EXIF + 单张 < 90KB
 - 图片以 `.webp.b64` 文本形式进 git（`public/images/*.webp` 二进制是 gitignore 的，Pages 构建时解码）
@@ -40,7 +40,7 @@ newsforge/
 - **体积预算**：`npm test` 会检查 `public/images/*.b64` 总量，超 250MB 直接失败、挡住推送（正常 90 天滚动下约 160MB）
 - **诚实说明**：90 天清理只管工作区，不管 git 历史——历史里的图片 blob 永远在。按每天约 1MB 估算，3 年左右历史增量约 1GB（GitHub 开始警告的量级）。到那时：要么迁到 R2（见下），要么重写 git 历史（`git filter-repo`，会打断所有克隆）。别等到 5GB 硬上限才动手
 
-**B. Cloudflare R2（正式站推荐，仓库几乎零增长）**
+**B. Cloudflare R2（默认，正式站推荐，仓库几乎零增长）**
 
 - 完整流程见 **docs/R2-IMAGES.md**（Agent 引导用户建 bucket → 拿密钥 → 冒烟测试 → lifecycle 决策）
 - 日常：本地处理图片不上传 → 用户确认推送后 `node pipeline/run.js --upload-images --date=YYYY-MM-DD` 传 R2 → edition 改写为公网 URL → 逐个 curl 验证 → 只推 edition JSON + `data/image-dims.json`
@@ -103,7 +103,7 @@ logo/favicon 换 `public/` 下的对应文件即可。深色模式模板已内�
 | `correctionsPage` | `/corrections/` 更正页，默认开 |
 | `qaChecks` | 推送前跑 `npm test`，默认开 |
 | `geoHide` | 按地域隐藏敏感内容，需 Pages Functions，默认关 |
-| `r2.enabled` | 图片存 Cloudflare R2（正式站推荐），默认关；开启见 docs/R2-IMAGES.md |
+| `r2.enabled` | 图片存 Cloudflare R2，默认开（未配密钥自动回退 b64）；开启完整流程见 docs/R2-IMAGES.md |
 
 ## 9. 故障排查
 

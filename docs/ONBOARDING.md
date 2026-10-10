@@ -76,11 +76,11 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 5. 🤖 你 curl 新站点的 URL，确认 HTTP 200 且标题是用户的网站名
 6. 如果第 1 步用户要了自定义域名：✋ 指引用户在 Pages 项目里 Custom domains → Set up a custom domain，按 Cloudflare 的提示加 DNS 记录
 
-### 图片策略（二选一，🤖 自动询问式 + ✋ 手动创建）
+### 图片策略（🤖 自动询问式 + ✋ 手动创建，默认 R2）
 
-默认 A（b64 进 git，零额外操作）。**正式站推荐 B**。
+**默认 B（R2，`features.r2.enabled=true`）**，未配好密钥前自动回退 A，用户也可明确说"不用 R2"选 A。
 
-- 选 A → 跳过，`site.json` 里 `features.r2.enabled=false`（默认）
+- 选 A → `site.json` 里 `features.r2.enabled=false`
 - 选 B → 按 `docs/R2-IMAGES.md` 的"Agent 引导用户的完整流程"一步一步带用户走：
   1. ✋ 用户建 R2 bucket
   2. ✋ 用户开公网访问（正式站推荐绑自定义图片域名，如 `img.example.com`）
