@@ -55,6 +55,24 @@ async function main() {
     await processEditionImages(TODAY);
     return;
   }
+  // R2 图片上传（用户确认推送后）：当期新图 → R2 → edition 改写为公网 URL → 重渲染
+  // 缺图则退出码 2，不继续发布。用法见 docs/R2-IMAGES.md
+  if (args['upload-images']) {
+    const { uploadEditionImages, r2Status } = await import('./lib/r2-images.js');
+    const st = r2Status();
+    if (!st.enabled) {
+      console.error(`[r2] 未启用：${st.reason}`);
+      process.exit(1);
+    }
+    const { uploaded, missing } = await uploadEditionImages(TODAY);
+    if (missing.length) {
+      console.error(`[r2] ${missing.length} 张图片缺失，不继续发布`);
+      process.exit(2);
+    }
+    console.log(`[r2] 上传 ${uploaded.length} 张，重渲染中…`);
+    await renderAll({ today: TODAY });
+    return;
+  }
   // 无 LLM key（如 Cloudflare Pages 环境）：只渲染已推送的 edition，不抓取不编辑
   if (!process.env.LLM_API_KEY) {
     console.log('未检测到 LLM_API_KEY，仅渲染已有版本');

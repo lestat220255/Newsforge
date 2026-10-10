@@ -25,18 +25,32 @@ newsforge/
 
 1. **构建任务**（用户起床前 1.5h）：`node pipeline/run.js` → 抓取 → AI 编辑 → 生成 `data/editions/YYYY-MM-DD.json` → 本地渲染到 `public/`。**只构建，不推送。**
 2. **推送确认**（用户起床时间）：向用户汇报今日摘要（各模块新内容数、头条标题），问"推送吗"。
-3. 用户确认后：`push_files` 推送 edition JSON + 新增图片 b64 → 等 3 分钟 → curl 首页确认 → curl `/feed.xml` 确认 RSS 同步 → 如启用 Telegram 则推送。
+3. 用户确认后：`push_files` 推送 edition JSON（+ 新增图片 b64，b64 模式；R2 模式则先 `node pipeline/run.js --upload-images` 传图改写再推 edition + `data/image-dims.json`，b64 不进 git）→ 等 3 分钟 → curl 首页确认 → curl `/feed.xml` 确认 RSS 同步 → 如启用 Telegram 则推送。
 4. **发布后检查清单**：首页 HTTP 200、日期正确、RSS 条目数为当期数、图片真实打开看过（不能只验 HTTP 200）。
 
 ## 4. 图片策略
+
+两种，二选一（安装时问用户，见 docs/ONBOARDING.md 第 5 步）：
+
+**A. b64 进 git（默认，零额外操作）**
 
 - 头条配图：RSS 自带图 → og:image → 下载本地 → 限宽 800px + WebP + 去 EXIF + 单张 < 90KB
 - 图片以 `.webp.b64` 文本形式进 git（`public/images/*.webp` 二进制是 gitignore 的，Pages 构建时解码）
 - **体积警告**：图片进 git 会让仓库持续变大。保留策略：图片 90 天、candidates 7 天，过期自动清理并在推送时删除对应的 b64
 - **体积预算**：`npm test` 会检查 `public/images/*.b64` 总量，超 250MB 直接失败、挡住推送（正常 90 天滚动下约 160MB）
-- **诚实说明**：90 天清理只管工作区，不管 git 历史——历史里的图片 blob 永远在。按每天约 1MB 估算，3 年左右历史增量约 1GB（GitHub 开始警告的量级）。到那时有两个选择：① 把图片迁到 Cloudflare R2（同账号、免费额度够用，可配 90 天生命周期自动删，edition 里存 URL 不存 b64）；② 重写 git 历史（`git filter-repo`，会打断所有克隆）。别等到 5GB 硬上限才动手
+- **诚实说明**：90 天清理只管工作区，不管 git 历史——历史里的图片 blob 永远在。按每天约 1MB 估算，3 年左右历史增量约 1GB（GitHub 开始警告的量级）。到那时：要么迁到 R2（见下），要么重写 git 历史（`git filter-repo`，会打断所有克隆）。别等到 5GB 硬上限才动手
+
+**B. Cloudflare R2（正式站推荐，仓库几乎零增长）**
+
+- 完整流程见 **docs/R2-IMAGES.md**（Agent 引导用户建 bucket → 拿密钥 → 冒烟测试 → lifecycle 决策）
+- 日常：本地处理图片不上传 → 用户确认推送后 `node pipeline/run.js --upload-images --date=YYYY-MM-DD` 传 R2 → edition 改写为公网 URL → 逐个 curl 验证 → 只推 edition JSON + `data/image-dims.json`
+- R2 按月分文件夹（`YYYY-MM/文件名.webp`）；图片**永久保留不设 lifecycle**（详情页是永久归档）
+- `.gitignore` 加 `public/images/*.webp.b64`
+
+通用铁律（两种都适用）：
+
 - og:image 可能是站标占位图（如含 logo/opg_/placeholder/default/avatar 字样）→ 跳过，无图比错图强
-- 上线前把图真正打开看一眼
+- 上线前把图真正打开看一眼（不能只验 HTTP 200）
 
 ## 5. 模块开发
 
@@ -89,10 +103,11 @@ logo/favicon 换 `public/` 下的对应文件即可。深色模式模板已内�
 | `correctionsPage` | `/corrections/` 更正页，默认开 |
 | `qaChecks` | 推送前跑 `npm test`，默认开 |
 | `geoHide` | 按地域隐藏敏感内容，需 Pages Functions，默认关 |
+| `r2.enabled` | 图片存 Cloudflare R2（正式站推荐），默认关；开启见 docs/R2-IMAGES.md |
 
 ## 9. 故障排查
 
 - 构建失败：先看 `node pipeline/run.js` 的报错，八成是某个源挂了 → `npm run probe` 看信源健康
 - 线上没更新：查 Pages 的构建日志，确认 main 分支推送成功
-- 图片裂了：检查对应的 `.webp.b64` 是否推送到仓库（构建环境只有 b64，没有本地二进制）
+- 图片裂了：b64 模式检查对应的 `.webp.b64` 是否推送到仓库（构建环境只有 b64，没有本地二进制）；R2 模式直接 curl 图片 URL 看 HTTP 状态和 Content-Type
 - 排序错乱：检查时间字符串是否带时区，统一走 `parseTime()` 按用户时区解析

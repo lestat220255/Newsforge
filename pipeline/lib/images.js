@@ -6,7 +6,15 @@ import sharp from 'sharp';
 import { fetchText, isSafeUrl, ROOT, DATA_DIR, EDITIONS_DIR } from './utils.js';
 
 const IMG_DIMS = {};
+// R2 图片宽高边车（data/image-dims.json，key 为完整公网 URL）：R2 图片无本地文件，构建环境可能没有 public/images
+function loadDimsSidecar() {
+  try {
+    const side = JSON.parse(readFileSync(join(DATA_DIR, 'image-dims.json'), 'utf8'));
+    for (const [k, v] of Object.entries(side)) if (v && v.w && v.h) IMG_DIMS[k] = v;
+  } catch {}
+}
 async function preloadImgDims() {
+  loadDimsSidecar(); // 边车必读：R2 模式下构建环境可能根本没有 public/images
   if (!existsSync(IMG_DIR)) return;
   // 注意：仓库里只有 .webp.b64（.webp 二进制是 gitignore 的），两种都要读
   const files = readdirSync(IMG_DIR).filter(f => f.endsWith('.webp') || f.endsWith('.webp.b64'));
@@ -185,6 +193,6 @@ function pruneOldFiles() {
 }
 
 export {
-  processEditionImages, pruneOldFiles, preloadImgDims, imgWH, fetchOgImage, downloadAndProcess,
+  processEditionImages, pruneOldFiles, preloadImgDims, loadDimsSidecar, imgWH, fetchOgImage, downloadAndProcess,
   IMG_DIR,
 };

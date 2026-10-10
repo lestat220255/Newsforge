@@ -11,6 +11,11 @@ import {
   fmtDate, fmtDateCN, dateBadge, detailUrl, entryDate, parseTime, rfc2822, shortTitle,
 } from './utils.js';
 
+// 绝对图片 URL（R2 迁移）：已是 http(s) 直接用，否则拼站点域名
+function absImg(u) {
+  return u && u.startsWith('http') ? u : SITE.url + (u || '');
+}
+
 function assertNoChainedDetailDate(dates) {
   const byDate = new Map();
   for (const d of dates) {
@@ -140,7 +145,7 @@ function renderPage(tpl, edition, dates, canonical, showTgBanner) {
   const navLinks = visibleSections.map((s) => `<a href="#${esc(s.id)}">${esc(s.name)}</a>`).join('');
   // og:image：用第一个有配图的头条， fallback 到图标
   const firstImg = visibleSections.map((s) => s.headline?.image).find(Boolean);
-  const ogImage = firstImg ? SITE.url + firstImg : SITE.url + '/favicon.svg';
+  const ogImage = firstImg ? absImg(firstImg) : SITE.url + '/favicon.svg';
   const tgOn = showTgBanner && FEATURES.telegram.enabled && FEATURES.telegram.channel;
   const tgBanner = tgOn ? `<div class="tg-banner" id="tg-banner"><span class="msg">📡 在 Telegram 上订阅 ${esc(SITE.name)}，每早同步推送当日头条</span><a class="sub-btn" href="https://t.me/${esc(FEATURES.telegram.channel)}" target="_blank" rel="noopener">订阅 →</a><button class="close" aria-label="关闭">×</button></div>` : '';
   return tpl
@@ -247,7 +252,7 @@ function renderDetail(tpl, ed, cur, prev, next, allArticles) {
   const canonical = SITE.url + cur.url;
   // 面包屑/返回首页指向文章所属日期的归档页，而非当日首页（2026-10-06 修复）
   const archiveUrl = `/archive/${ed.date}/`;
-  const ogImage = entry.image ? SITE.url + entry.image : (sec.headline && sec.headline.image ? SITE.url + sec.headline.image : SITE.url + '/favicon.svg');
+  const ogImage = entry.image ? absImg(entry.image) : (sec.headline && sec.headline.image ? absImg(sec.headline.image) : SITE.url + '/favicon.svg');
   const ogDesc = summary.length > 140 ? summary.slice(0, 140) + '…' : summary;
   return tpl
     .replaceAll('{{SITE_NAME}}', esc(SITE.name))

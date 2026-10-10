@@ -76,6 +76,21 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 5. 🤖 你 curl 新站点的 URL，确认 HTTP 200 且标题是用户的网站名
 6. 如果第 1 步用户要了自定义域名：✋ 指引用户在 Pages 项目里 Custom domains → Set up a custom domain，按 Cloudflare 的提示加 DNS 记录
 
+### 图片策略（二选一，🤖 自动询问式 + ✋ 手动创建）
+
+默认 A（b64 进 git，零额外操作）。**正式站推荐 B**。
+
+- 选 A → 跳过，`site.json` 里 `features.r2.enabled=false`（默认）
+- 选 B → 按 `docs/R2-IMAGES.md` 的"Agent 引导用户的完整流程"一步一步带用户走：
+  1. ✋ 用户建 R2 bucket
+  2. ✋ 用户开公网访问（正式站推荐绑自定义图片域名，如 `img.example.com`）
+  3. ✋ 用户建 API token（Object Read & Write，只限这个 bucket），**Secret 只显示一次**，当场复制
+  4. 用户把 endpoint / bucket / publicBaseUrl / accessKeyId / secretAccessKey 发给你
+     - 安全表单接不了 R2（请求签名机制），只能用户直接发；你立刻存 `~/.config/newsforge/r2.json`（600 权限），绝不进 git
+  5. 🤖 你冒烟测试：传一张 → curl 200 + image/webp → **亲手打开看一眼** → 删测试文件
+  6. 🤖 问用户 lifecycle：**推荐永久保留不设删除规则**（详情页是永久归档，90 天删图=老文章缺图；约 1MB/天，免费额度内零成本）
+  7. `site.json` 里 `"features": { "r2": { "enabled": true } }`，`.gitignore` 加 `public/images/*.webp.b64`
+
 ## 第 6 步：主题风格（🤖 自动询问式）
 
 **在模块确认之后才谈主题。** 根据网站的领域和调性，给用户推荐 2-3 套主题方向（配色、logo 风格、图标语言），每套一句话描述 + 为什么适合。用户选定后：

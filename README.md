@@ -33,9 +33,9 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 
 ## 里面有什么
 
-- `pipeline/` — 抓取 + 构建管线：`run.js` 只做调度，`lib/` 下分模块（`utils` 基础工具 / `fetchers` 信源抓取 / `edit` LLM 编辑 / `images` 图片管线 / `render` 静态渲染）
+- `pipeline/` — 抓取 + 构建管线：`run.js` 只做调度，`lib/` 下分模块（`utils` 基础工具 / `fetchers` 信源抓取 / `edit` LLM 编辑 / `images` 图片管线 / `render` 静态渲染 / `r2-images` R2 图片上传）
 - `modules/cyber/` — 一个示例模块，照着它就能写自己的模块
-- `docs/` — 写给 AI 助手看的安装剧本和手册（`ONBOARDING.md` 是入口）
+- `docs/` — 写给 AI 助手看的安装剧本和手册（`ONBOARDING.md` 是入口，`R2-IMAGES.md` 是图片存 R2 的完整指南）
 - `crons/` — 定时任务模板：每日构建、推送确认、信源健康检查
 
 ## 两条运行路径（先看懂这个）

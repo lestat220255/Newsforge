@@ -1,7 +1,9 @@
 {
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1149.0",
     "cheerio": "^1.2.0",
     "fast-xml-parser": "^4.5.0",
+    "proxy-agent": "^8.0.2",
     "sharp": "^0.35.5"
   },
   "description": "Newsforge：用 AI Agent 对话式搭建的纯静态新闻聚合站模板。零 API 成本，Cloudflare Pages 托管。",
@@ -17,7 +19,7 @@
     "fetch": "node pipeline/run.js --fetch-only",
     "probe": "node pipeline/probe-sources.js",
     "render": "node pipeline/run.js --render-only",
-    "test": "python3 pipeline/qa-check.py && node --test pipeline/lib/utils.test.js"
+    "test": "python3 pipeline/qa-check.py && node --test pipeline/lib/utils.test.js pipeline/lib/r2-images.test.js"
   },
   "type": "module",
   "version": "0.1.0"

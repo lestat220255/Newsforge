@@ -3,6 +3,10 @@
     "correctionsPage": true,
     "geoHide": false,
     "qaChecks": true,
+    "r2": {
+      "enabled": false,
+      "note": "图片存 Cloudflare R2（推荐，仓库不膨胀）：开启后按 docs/R2-IMAGES.md 引导用户建 bucket、配密钥"
+    },
     "telegram": {
       "channel": "",
       "enabled": false
