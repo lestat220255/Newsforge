@@ -45,7 +45,16 @@ export const FEATURES = {
   correctionsPage: true,   // /corrections/ 更正页
   qaChecks: true,          // 推送前跑 npm test（qa-check.py）
   geoHide: false,          // 地域隐藏（需 Cloudflare Pages Function）
+  aiComment: true,         // AI 点评：头条一句话点评
+  aiAnalysis: true,        // AI 分析：每条 1-3 段分析 + keyFacts（更耗 token）
   ...raw.features,
+};
+
+// 编辑口径（安装时多选，默认空=都不启用）
+export const EDITORIAL = {
+  principles: [], // 选中的原则 id，见 pipeline/lib/principles.js
+  custom: '',      // 用户自定义补充口径
+  ...raw.editorial,
 };
 
 // 模块：modules/<id>/module.json，按 position 排序

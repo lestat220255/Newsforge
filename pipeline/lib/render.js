@@ -2,7 +2,8 @@
 // 依赖 utils / edit / images；被 run 调用。
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
-import { SITE, FEATURES } from '../site-config.js';
+import { SITE, FEATURES, EDITORIAL } from '../site-config.js';
+import { principlesAboutHtml } from './principles.js';
 import { TOPICS, topicUrl, isValidTopic } from '../topics.js';
 import { preloadImgDims, imgWH, IMG_DIR } from './images.js';
 import { listEditions, loadEdition } from './edit.js';
@@ -650,7 +651,12 @@ async function renderAll({ today } = {}) {
   if (latestEd) renderFeedXml(latestEd);
   // 关于页
   const aboutTpl = readFileSync(join(PIPELINE_DIR, 'about-template.html'), 'utf8');
-  const aboutHtml = aboutTpl
+  const principlesList = principlesAboutHtml(EDITORIAL.principles);
+  const aboutTplPrinciples = principlesList
+    ? aboutTpl
+    : aboutTpl.replace(/\s*<h2>编辑原则<\/h2>\s*<div class="card">\s*<ul>\s*\{\{PRINCIPLES_LIST\}\}\s*<\/ul>\s*<\/div>/, '');
+  const aboutHtml = aboutTplPrinciples
+    .replaceAll('{{PRINCIPLES_LIST}}', principlesList)
     .replaceAll('{{SITE_NAME}}', esc(SITE.name))
     .replaceAll('{{SITE_URL}}', esc(SITE.url))
     .replaceAll('{{TAGLINE}}', esc(SITE.tagline))

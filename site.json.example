@@ -10,7 +10,9 @@
     "telegram": {
       "channel": "",
       "enabled": false
-    }
+    },
+    "aiComment": true,
+    "aiAnalysis": true
   },
   "site": {
     "contactEmail": "you@example.com",
@@ -25,5 +27,10 @@
   },
   "theme": {
     "note": "主题（logo/图标/配色）在安装时与用户沟通后决定，不要直接套用示例。配色通过模板 CSS 变量覆盖，见 docs/SETUP.md 第 6 节。"
+  },
+  "editorial": {
+    "principles": [],
+    "custom": "",
+    "note": "编辑原则（默认全不启用，见 docs/editorial-principles.md）：安装时多选，如 [\"no-filler\", \"source-first\"]；custom 写自定义补充口径"
   }
 }
