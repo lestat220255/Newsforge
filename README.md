@@ -57,10 +57,10 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 
 ```
 我想用 Newsforge 模板建一个每日更新的新闻网站，仓库已经建好了：
-github.com/XXX/XXX
+github.com/XXX/XXX(替换为实际仓库地址)
 
-请直接从仓库读取 docs/ONBOARDING.md，严格按剧本顺序帮我初始化。
-先验证一下你有没有这个仓库的推送权限；如果是私有仓库，请引导我配置 PAT（约 2 分钟）。
+请先验证一下你有没有这个仓库的推送权限；如果是私有仓库，请引导我配置 PAT。
+然后再请直接从仓库读取 docs/ONBOARDING.md，严格按剧本顺序帮我初始化。
 ```
 
 AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访问令牌：GitHub → Settings → Developer settings → Personal access tokens → 勾 `repo` 权限）——配好后推送全自动，不用每次点审批；不配的话每次推送你都要亲手点一次确认
