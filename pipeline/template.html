@@ -207,7 +207,7 @@ nav.sections a:active{transform:scale(.93);background:var(--accent-soft);border-
 nav.sections a.ext{border-color:var(--ext-border);color:var(--ext-text);background:var(--ext-bg)}
 nav.sections a.ext:hover{border-color:var(--ext-text);color:var(--ext-text-hover);background:var(--ext-bg-hover)}
 main.grid{column-count:1;column-gap:22px}
-@media(min-width:900px){main.grid{column-count:2}}
+@media(min-width:900px){main.grid{column-count:var(--grid-cols,2)}}
 main.grid>section{break-inside:avoid;margin:0 0 22px}
 section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin:0;scroll-margin-top:78px}
 section h2{margin:0 0 14px;font-size:20px}
@@ -272,7 +272,7 @@ ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
 <div class="wrap">
   <header class="top" data-pagefind-ignore>
     <div class="head-row">
-      <h1><a class="brand" href="/"><span class="site-name">{{SITE_NAME}}</span></a></h1>
+      <h1><a class="brand" href="/"><img class="logo" src="/logo.png" alt="{{SITE_NAME}}"><span class="site-name">{{SITE_NAME}}</span></a></h1>
       <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
@@ -297,7 +297,7 @@ ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
 
   <nav class="sections" data-pagefind-ignore>{{NAV}}</nav>
 
-  <main class="grid">
+  <main class="grid" style="--grid-cols:{{GRID_COLS}}">
     <span data-pagefind-meta="title" style="display:none">{{SITE_NAME}} · {{DATE}}</span>
     {{SECTIONS}}
   </main>

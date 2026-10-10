@@ -25,7 +25,8 @@
     "notifyEmail": "you@example.com",
     "tagline": "一句话介绍你的网站（会显示在首页标题下方和 RSS 描述里）",
     "timezone": "Asia/Shanghai",
-    "url": "https://example.pages.dev"
+    "url": "https://example.pages.dev",
+    "layout": "double"
   },
   "theme": {
     "note": "主题（logo/图标/配色）在安装时与用户沟通后决定，不要直接套用示例。配色通过模板 CSS 变量覆盖，见 docs/SETUP.md 第 6 节。"

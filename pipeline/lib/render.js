@@ -148,8 +148,10 @@ function renderPage(tpl, edition, dates, canonical, showTgBanner) {
   const firstImg = visibleSections.map((s) => s.headline?.image).find(Boolean);
   const ogImage = firstImg ? absImg(firstImg) : SITE.url + '/favicon.png';
   const tgOn = showTgBanner && FEATURES.telegram.enabled && FEATURES.telegram.channel;
+  const gridCols = { single: 1, double: 2, triple: 3 }[SITE.layout] || 2;
   const tgBanner = tgOn ? `<div class="tg-banner" id="tg-banner"><span class="msg">📡 在 Telegram 上订阅 ${esc(SITE.name)}，每早同步推送当日头条</span><a class="sub-btn" href="https://t.me/${esc(FEATURES.telegram.channel)}" target="_blank" rel="noopener">订阅 →</a><button class="close" aria-label="关闭">×</button></div>` : '';
   return tpl
+    .replaceAll('{{GRID_COLS}}', String(gridCols))
     .replaceAll('{{SITE_NAME}}', esc(SITE.name))
     .replaceAll('{{SITE_URL}}', esc(SITE.url))
     .replaceAll('{{TAGLINE}}', esc(SITE.tagline))

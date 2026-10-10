@@ -34,6 +34,7 @@ export const SITE = {
   language: 'zh-CN',
   timezone: 'Asia/Shanghai',
   contactEmail: '',
+  layout: 'double', // 首页布局：single 单列 / double 双列（默认）/ triple 三列
   disclaimer: '',
   notifyEmail: '',
   ...raw.site,
