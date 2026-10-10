@@ -24,7 +24,10 @@ def load_json(path):
         return json.load(f)
 
 # ---------- 1. 脚本语法 ----------
-for script in ['pipeline/run.js', 'pipeline/probe-sources.js', 'pipeline/fetch-text.js', 'pipeline/topics.js']:
+for script in ['pipeline/run.js', 'pipeline/site-config.js', 'pipeline/probe-sources.js',
+               'pipeline/fetch-text.js', 'pipeline/topics.js',
+               'pipeline/lib/utils.js', 'pipeline/lib/fetchers.js', 'pipeline/lib/edit.js',
+               'pipeline/lib/images.js', 'pipeline/lib/render.js']:
     r = subprocess.run(['node', '--check', script], cwd=ROOT, capture_output=True)
     if r.returncode == 0:
         ok(f'语法 {script}')

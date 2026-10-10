@@ -17,7 +17,7 @@
 | huggingface | HuggingFace 热门模型榜（开源/AI 模块用） | 关（按需） |
 | github | GitHub releases / trending（开源模块用） | 关（按需） |
 
-> 抓取 UA：默认 `NewsforgeBot/0.1`；`BROWSER_UA_HOSTS`（`pipeline/run.js`）里的域名
+> 抓取 UA：默认 `NewsforgeBot/0.1`；`BROWSER_UA_HOSTS`（`pipeline/lib/utils.js`）里的域名
 > （如直接拒绝机器人 UA 的站点）会自动改用浏览器 UA。加新站时如果被 403/连接重置，
 > 先把域名加进这个集合再调选择器。
 

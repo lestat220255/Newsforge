@@ -1,5 +1,7 @@
 // 全文抓取助手：node pipeline/fetch-text.js <url>
 // 输出文章正文纯文本（去标签、去脚本样式），供编辑写摘要前阅读
+import { sniffCharset, decodeBody } from './lib/utils.js';
+
 const url = process.argv[2];
 if (!url) {
   console.error('用法: node pipeline/fetch-text.js <url>');
@@ -45,19 +47,9 @@ async function main() {
       chunks.push(value);
     }
     let buf = Buffer.concat(chunks);
-    // 编码嗅探（2026-10-09）：部分中文站（汽车之家/车质网）用 GBK，res.text() 默认 UTF-8 会乱码
-    let charset = 'utf-8';
-    const ct = res.headers.get('content-type') || '';
-    const cm = ct.match(/charset=([\w-]+)/i);
-    if (cm) charset = cm[1].toLowerCase();
-    else {
-      const head = buf.subarray(0, 4096).toString('latin1');
-      const m2 = head.match(/<meta[^>]+charset=["']?([\w-]+)/i);
-      if (m2) charset = m2[1].toLowerCase();
-    }
-    let html = (charset === 'gbk' || charset === 'gb2312' || charset === 'gb18030')
-      ? new TextDecoder('gb18030').decode(buf)
-      : buf.toString('utf8');
+    // 编码嗅探：与 run.js fetchText 共用 lib/utils.js 的实现
+    const charset = sniffCharset(buf, res.headers.get('content-type'));
+    let html = decodeBody(buf, charset);
     // 去掉 script/style/nav/header/footer/aside
     html = html.replace(/<script[\s\S]*?<\/script>/gi, ' ');
     html = html.replace(/<style[\s\S]*?<\/style>/gi, ' ');
