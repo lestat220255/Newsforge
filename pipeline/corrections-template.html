@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('newsforge-theme');
+    if(t !== 'light' && t !== 'dark'){
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+    var mc = document.getElementById('meta-theme-color');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+  }catch(e){}
+})();
+</script>
+<title>更正记录 · {{SITE_NAME}}</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{SITE_NAME}}">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="更正记录 · {{SITE_NAME}}">
+<meta property="og:description" content="{{TAGLINE}}">
+<meta property="og:url" content="{{SITE_URL}}/corrections/">
+<meta name="twitter:card" content="summary">
+<link rel="alternate" type="application/rss+xml" title="{{SITE_NAME}}" href="/feed.xml">
+<style>
+
+:root{
+  color-scheme:light;
+  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
+  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
+  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;line-height:1.75}
+.wrap{max-width:860px;margin:0 auto;padding:24px 20px}
+header.top{margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header.top h1{font-size:24px;margin:0}header.top h1 a{color:var(--text);text-decoration:none}
+a{color:var(--accent)}h2{font-size:19px;margin:32px 0 12px;color:var(--text)}
+p,li{font-size:15px}ul{padding-left:22px}li{margin-bottom:6px}
+footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:16px 0}
+.card .cdate{font-size:13px;color:var(--muted)}
+.card .citem{font-weight:600;margin:6px 0}
+.card .cfix{color:var(--text2)}
+.card .creason{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);padding:32px 0;text-align:center}
+.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle svg{width:17px;height:17px}
+.theme-toggle .icon-sun{display:none}
+:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+.wm-a{display:inline-flex;flex-direction:column;line-height:1;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" data-pagefind-ignore><h1><a href="/"><span class="site-name">{{SITE_NAME}}</span></a></h1>
+    <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
+    </button></header>
+
+  <h2>更正记录</h2>
+  <p>我们改过什么、为什么改，都记在这里。犯错不可怕，藏着不认才可怕。</p>
+  {{CORRECTIONS}}
+
+  <footer data-pagefind-ignore>
+    <a href="/">返回首页</a> · <a href="/about/">关于我们</a> · <a href="/feed.xml">RSS 订阅</a>
+  </footer>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('theme-toggle');
+  var metaTheme = document.getElementById('meta-theme-color');
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  var init = root.getAttribute('data-theme') || 'light';
+  applyMeta(init);
+  if(btn){
+    btn.addEventListener('click', function(){
+      var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
+      applyMeta(next);
+    });
+  }
+})();
+</script>
+</body>
+</html>

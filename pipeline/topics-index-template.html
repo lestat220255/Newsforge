@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('newsforge-theme');
+    if(t !== 'light' && t !== 'dark'){
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+    var mc = document.getElementById('meta-theme-color');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+  }catch(e){}
+})();
+</script>
+<title>话题索引 · {{SITE_NAME}}</title>
+<meta name="description" content="{{SITE_NAME}}话题索引 - 按话题聚合往期报道">
+<link rel="alternate" type="application/rss+xml" title="{{SITE_NAME}} RSS" href="/feed.xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{SITE_NAME}}">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="话题索引 · {{SITE_NAME}}">
+<meta property="og:description" content="{{TAGLINE}}">
+<meta property="og:url" content="{{SITE_URL}}/topics/">
+<meta property="og:image" content="{{SITE_URL}}/favicon.svg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="{{SITE_URL}}/topics/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+
+:root{
+  color-scheme:light;
+  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
+  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
+  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
+  --stale:#9aa0ae; --stale-bg:#eef0f4; --stale-border:#d5dae3;
+  --warn:#b7791f; --warn-bg:#fdf3e0;
+  --nav-bg:rgba(247,243,234,.88); --comment-bg:rgba(22,104,220,.06); --comment-border:#1668dc;
+  --logo-stroke:#1a3a5c;
+  --wm-a1:#1a3a5c; --wm-a2:#3d7dc4;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
+  --warn:#e8b33d; --warn-bg:#3a2f14;
+  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
+  --logo-stroke:#7cc4ff;
+  --wm-a1:#8fc1f5; --wm-a2:#d4e6fb;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme]){
+  color-scheme:dark;
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
+  --warn:#e8b33d; --warn-bg:#3a2f14;
+  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px 60px}
+header.top{padding:34px 0 10px;border-bottom:1px solid var(--border)}
+header.top h1{margin:0;font-size:30px;letter-spacing:2px;display:flex;align-items:center}
+header.top h1 a.brand{color:inherit;text-decoration:none;display:flex;align-items:center}
+header.top h1 a.brand:hover{color:var(--accent)}
+header.top h1 .logo{height:38px;width:38px;margin-right:12px;flex:none}
+.site-name{font-size:24px;font-weight:800;letter-spacing:.5px;color:var(--text)}
+:root{--font-display:system-ui,-apple-system,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif}
+header.top p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.crumb{padding:18px 0 6px;font-size:13px;color:var(--muted)}
+.crumb a{color:var(--accent);text-decoration:none}
+details.month{margin:18px 0;border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden}
+details.month summary{cursor:pointer;padding:16px 22px;font-size:18px;font-weight:bold;list-style:none;display:flex;align-items:center;gap:10px}
+details.month summary::-webkit-details-marker{display:none}
+details.month summary::before{content:"▸";color:var(--accent);transition:transform .15s}
+details.month[open] summary::before{transform:rotate(90deg)}
+details.month summary .mcnt{font-size:13px;color:var(--muted);font-weight:normal}
+details.month .ed{margin:0 22px 22px}
+.ed{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin:22px 0}
+.ed h2{margin:0 0 6px;font-size:20px}
+.ed h2 a{color:var(--text);text-decoration:none}
+.ed h2 a:hover{color:var(--accent)}
+.ed h2 .cnt{font-size:13px;color:var(--muted);font-weight:normal;margin-left:10px}
+ul.hl{list-style:none;margin:12px 0 0;padding:0}
+ul.hl li{padding:12px 0;border-top:1px solid var(--border)}
+ul.hl li:first-child{border-top:none}
+ul.hl .t{font-size:16px}
+ul.hl .t a{color:var(--text);text-decoration:none}
+ul.hl .t a:hover{color:var(--accent)}
+ul.hl .sec{display:inline-block;font-size:12px;color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:0 8px;margin-right:8px;white-space:nowrap}
+ul.hl .sum{margin:4px 0 0;color:var(--muted);font-size:14px}
+footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+footer .build{margin-top:8px;font-size:12px;color:var(--muted2)}
+a{color:var(--accent)}
+
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle svg{width:19px;height:19px}
+.theme-toggle .icon-sun{display:none}
+:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+
+/* 装饰标题样式（中性占位，见 docs/SETUP.md 第 6 节按沟通定制） */
+.wm-a{display:inline-flex;flex-direction:column;line-height:1;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" data-pagefind-ignore>
+    <div class="head-row">
+      <h1><a class="brand" href="/"><span class="site-name">{{SITE_NAME}}</span></a></h1>
+      <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
+      </button>
+    </div>
+    <p>{{TAGLINE}}</p>
+  </header>
+  <nav class="crumb"><a href="/">首页</a> <span>/</span> <span>话题索引</span></nav>
+  <main data-pagefind-body>
+    {{TOPICS_LIST}}
+  </main>
+  <footer data-pagefind-ignore>
+    <strong>免责声明：</strong>{{DISCLAIMER}}
+    <div class="build">构建于 {{BUILD_TIME}} · <a href="/about/">关于我们</a> · <a href="/feed.xml">RSS 订阅</a></div>
+  </footer>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('theme-toggle');
+  var metaTheme = document.getElementById('meta-theme-color');
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
+  var init = root.getAttribute('data-theme') || 'light';
+  applyMeta(init); applyLabel(init);
+  if(btn){
+    btn.addEventListener('click', function(){
+      var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
+      applyMeta(next); applyLabel(next);
+    });
+  }
+  try{
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function(e){
+      try{
+        if(!localStorage.getItem('newsforge-theme')){
+          var t = e.matches ? 'dark' : 'light';
+          root.setAttribute('data-theme', t);
+          applyMeta(t); applyLabel(t);
+        }
+      }catch(err){}
+    };
+    if(mq.addEventListener) mq.addEventListener('change', onChange);
+    else if(mq.addListener) mq.addListener(onChange);
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
