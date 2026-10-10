@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<script>
+/* 主题初始化：同步执行，必须在 CSS 解析前设置 data-theme，避免主题闪烁 */
+(function(){
+  try{
+    var t = localStorage.getItem('newsforge-theme');
+    if(t !== 'light' && t !== 'dark'){
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+    var mc = document.getElementById('meta-theme-color');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+  }catch(e){}
+})();
+</script>
+<script>
+/* TG 订阅横幅防闪：同步执行，已关闭则在 CSS 解析前隐藏，避免刷新时短暂闪现 */
+(function(){
+  try{
+    if(localStorage.getItem('tg-banner-closed') === '1'){
+      document.documentElement.classList.add('tg-banner-hidden');
+    }
+  }catch(e){}
+})();
+</script>
+<title>{{SITE_NAME}} · {{DATE}}</title>
+<meta name="description" content="{{SITE_NAME}} - 面向中文读者的资讯聚合站，聚焦网络工具、开源与海外生活，兼顾国际要闻">
+<link rel="alternate" type="application/rss+xml" title="{{SITE_NAME}} RSS" href="/feed.xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{SITE_NAME}}">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="{{SITE_NAME}} · {{DATE}}">
+<meta property="og:description" content="面向中文读者的资讯聚合站，聚焦网络工具、开源与海外生活，兼顾国际要闻">
+<meta property="og:url" content="{{CANONICAL}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="{{CANONICAL}}">
+<link href="/pagefind/pagefind-ui.css" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+
+:root{
+  color-scheme:light;
+  /* 浅色主题（默认） */
+  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
+  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
+  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
+  --stale:#9aa0ae; --stale-bg:#eef0f4; --stale-border:#d5dae3;
+  --warn:#b7791f; --warn-bg:#fdf3e0;
+  --date-bg:#e3f0fd; --date-text:#1668dc; --date-border:#bcd8f5;
+  --ext-border:#c9a227; --ext-text:#9a7b1a; --ext-text-hover:#7a6114;
+  --ext-bg:rgba(201,162,39,.08); --ext-bg-hover:rgba(201,162,39,.16);
+  --nav-bg:rgba(247,243,234,.88); --comment-bg:rgba(22,104,220,.06); --comment-border:#1668dc;
+  --banner-bg:linear-gradient(90deg,#fdf9f1,#eee2c9); --banner-border:#ddd0b8;
+  --logo-stroke:#1a3a5c;
+  --wm-a1:#1a3a5c; --wm-a2:#3d7dc4;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  /* 深色主题 */
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
+  --warn:#e8b33d; --warn-bg:#3a2f14;
+  --date-bg:#0d2537; --date-text:#7cc4ff; --date-border:#1e4a6e;
+  --ext-border:#8a6d2f; --ext-text:#d4a93c; --ext-text-hover:#e8bc4f;
+  --ext-bg:rgba(200,162,74,.07); --ext-bg-hover:rgba(200,162,74,.14);
+  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
+  --banner-bg:linear-gradient(135deg,#1a2b45,#232f45); --banner-border:#2c3a52;
+  --logo-stroke:#7cc4ff;
+  --wm-a1:#8fc1f5; --wm-a2:#d4e6fb;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme:dark){
+  /* 无 JS 时跟随系统 */
+  :root:not([data-theme]){
+  color-scheme:dark;
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --stale:#6b7688; --stale-bg:#2a2d33; --stale-border:#3d4149;
+  --warn:#e8b33d; --warn-bg:#3a2f14;
+  --date-bg:#0d2537; --date-text:#7cc4ff; --date-border:#1e4a6e;
+  --ext-border:#8a6d2f; --ext-text:#d4a93c; --ext-text-hover:#e8bc4f;
+  --ext-bg:rgba(200,162,74,.07); --ext-bg-hover:rgba(200,162,74,.14);
+  --nav-bg:rgba(15,20,25,.88); --comment-bg:rgba(77,163,255,.08); --comment-border:#4da3ff;
+  --banner-bg:linear-gradient(135deg,#1a2b45,#232f45); --banner-border:#2c3a52;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px 60px}
+/* 可信度徽标（2026-10-07）：待确认=单信源未证实；多信源=多家独立媒体交叉报道 */
+.badge{display:inline-block;font-size:11px;line-height:1.5;padding:0 7px;border-radius:20px;margin-left:6px;vertical-align:2px;font-weight:600;white-space:nowrap}
+.badge-pending{color:var(--muted);border:1px solid var(--border);background:var(--surface2)}
+.badge-multi{color:#2ea043;border:1px solid rgba(46,160,90,.45);background:rgba(46,160,90,.1)}
+.trust-badges{margin:6px 0 0}
+.badge-update{color:var(--accent);border:1px solid var(--accent);background:var(--accent-soft)}
+.trust-badges:empty{display:none}
+
+.tg-banner{display:flex;align-items:center;gap:12px;background:var(--banner-bg);border:1px solid var(--banner-border);border-radius:12px;padding:12px 16px;margin:16px 0 4px;font-size:14px}
+/* TG 横幅防闪：head 内联脚本在已关闭时给 html 加 tg-banner-hidden，渲染前隐藏 */
+html.tg-banner-hidden #tg-banner{display:none}
+.tg-banner .msg{flex:1;color:var(--text)}
+.tg-banner .sub-btn{background:var(--accent);color:var(--on-accent);font-weight:600;border:none;border-radius:20px;padding:7px 20px;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.tg-banner .sub-btn:hover{background:var(--accent-hover)}
+.tg-banner .close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px;line-height:1}
+.tg-banner .close:hover{color:var(--text)}
+@media (max-width:640px){
+  .tg-banner{flex-wrap:wrap;padding:10px 14px;gap:10px}
+  .tg-banner .msg{flex:1 1 100%;font-size:13px}
+  .tg-banner .sub-btn{flex:1;text-align:center;padding:8px 0}
+  .tg-banner .close{position:absolute;top:6px;right:8px}
+  .tg-banner{position:relative}
+}
+/* 搜索框高度对齐归档下拉菜单 */
+.pagefind-ui__search-input{height:36px!important;font-size:14px!important}
+.pagefind-ui__search-clear{height:36px!important;top:0!important;right:6px!important;background:transparent!important;border:none!important;color:var(--muted)!important;font-size:13px!important;padding:0 8px!important;cursor:pointer}
+.pagefind-ui__search-clear:hover{color:var(--text)!important}
+/* 放大镜图标垂直居中（pagefind 用 ::before 伪元素渲染图标，默认 top:23px 是按默认输入框高度算的） */
+.pagefind-ui__form{position:relative}
+.pagefind-ui__form::before{top:9px!important}
+/* 搜索框静态占位（2026-10-07）：Pagefind JS 延迟加载，占位样式自包含，不依赖 pagefind-ui.css 的 svelte 作用域类名 */
+.pf-wrap{position:relative}
+.pf-placeholder{width:100%;height:36px;box-sizing:border-box;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 12px 0 38px;outline:none}
+.pf-placeholder::placeholder{color:var(--muted);opacity:1}
+.pf-placeholder:focus{border-color:var(--accent)}
+.pf-kbd{position:absolute;right:10px;top:8px;min-width:20px;height:20px;line-height:18px;text-align:center;font-size:12px;font-family:inherit;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;pointer-events:none}
+/* 真实搜索框聚焦/有内容时藏 "/" 徽标（让位给清除按钮）；:placeholder-shown 能感知程序化清空 */
+.pagefind-ui__form:focus-within .pf-kbd{display:none}
+.pagefind-ui__search-input:not(:placeholder-shown) ~ .pf-kbd{display:none}
+.pf-wrap::before{content:"";position:absolute;left:11px;top:9px;width:18px;height:18px;pointer-events:none;opacity:.7;background-color:var(--muted);-webkit-mask-image:url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 18 18' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.7549 11.255H11.9649L11.6849 10.985C12.6649 9.845 13.2549 8.365 13.2549 6.755C13.2549 3.165 10.3449 0.255005 6.75488 0.255005C3.16488 0.255005 0.254883 3.165 0.254883 6.755C0.254883 10.345 3.16488 13.255 6.75488 13.255C8.36488 13.255 9.84488 12.665 10.9849 11.685L11.2549 11.965V12.755L16.2549 17.745L17.7449 16.255L12.7549 11.255ZM6.75488 11.255C4.26488 11.255 2.25488 9.245 2.25488 6.755C2.25488 4.26501 4.26488 2.255 6.75488 2.255C9.24488 2.255 11.2549 4.26501 11.2549 6.755C11.2549 9.245 9.24488 11.255 6.75488 11.255Z' fill='%23000000'/%3E%3C/svg%3E%0A");mask-image:url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 18 18' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.7549 11.255H11.9649L11.6849 10.985C12.6649 9.845 13.2549 8.365 13.2549 6.755C13.2549 3.165 10.3449 0.255005 6.75488 0.255005C3.16488 0.255005 0.254883 3.165 0.254883 6.755C0.254883 10.345 3.16488 13.255 6.75488 13.255C8.36488 13.255 9.84488 12.665 10.9849 11.685L11.2549 11.965V12.755L16.2549 17.745L17.7449 16.255L12.7549 11.255ZM6.75488 11.255C4.26488 11.255 2.25488 9.245 2.25488 6.755C2.25488 4.26501 4.26488 2.255 6.75488 2.255C9.24488 2.255 11.2549 4.26501 11.2549 6.755C11.2549 9.245 9.24488 11.255 6.75488 11.255Z' fill='%23000000'/%3E%3C/svg%3E%0A");-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:contain;mask-size:contain}
+header.top{padding:34px 0 10px;border-bottom:1px solid var(--border)}
+header.top h1{margin:0;font-size:30px;letter-spacing:2px;display:flex;align-items:center}
+header.top h1 a.brand{color:inherit;text-decoration:none;display:flex;align-items:center}
+header.top h1 a.brand:hover{color:var(--accent)}
+header.top h1 .logo{height:38px;width:38px;margin-right:12px;flex:none}
+.site-name{font-size:24px;font-weight:800;letter-spacing:.5px;color:var(--text)}
+:root{--font-display:system-ui,-apple-system,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif}
+header.top p{margin:6px 0 0;color:var(--muted);font-size:14px}
+/* 今日要览条（2026-10-08）：通栏分隔带，报纸报头感；仅首页搜索栏下方 */
+.digest{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 2px;margin:20px 0 8px}
+.digest-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.digest-issue{font-size:13px;color:var(--muted)}
+.digest-issue strong{font-size:15px;font-weight:700;letter-spacing:3px;color:var(--text);margin-right:6px}
+.digest-stats{font-size:13px;color:var(--muted)}
+.digest-oneliner{margin:10px 0 0;font-size:15px;font-weight:500}
+.digest-picks{margin-top:12px}
+.digest-picks-title{font-size:13px;font-weight:600;letter-spacing:2px;color:var(--text);border-left:3px solid var(--accent);padding-left:8px;margin-bottom:8px}
+.digest-picks ul{list-style:none;margin:0;padding:0}
+.digest-picks li{margin:6px 0;font-size:14px;line-height:1.6}
+.digest-picks .sec-tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:1px 8px;margin-right:8px;white-space:nowrap}
+.digest-picks a{color:var(--text);text-decoration:none}
+.digest-picks a:hover{color:var(--accent);text-decoration:underline}
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}
+/* 搜索结果浮层：absolute 定位，不撑开 toolbar 高度，桌面/移动通用 */
+#search{position:relative;z-index:60}
+.pagefind-ui__results-area{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);max-height:70vh;overflow-y:auto;padding:8px 0;margin-top:0!important}
+.pagefind-ui__results-area:has(.pagefind-ui__result){display:block}
+/* 收紧 Pagefind 自带的 filter 面板上边距（svelte 作用域类，需 !important 覆盖） */
+.pagefind-ui__filter-panel{margin-top:8px!important}
+.pagefind-ui__message{padding:8px 16px!important;font-size:13px!important;color:var(--muted)!important}
+.pagefind-ui__result{border-top:1px solid var(--border)!important;padding:12px 16px!important}
+.pagefind-ui__result:first-of-type{border-top:none!important}
+/* 移动端下拉框宽度由 JS 动态设置（见下方脚本） */
+/* .pagefind-ui 保持 static，避免它成为下拉框的定位上下文 */
+#search .pagefind-ui{position:static!important}
+.toolbar select{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px}
+.toolbar .arch-link{font-size:14px;color:var(--muted);text-decoration:none;white-space:nowrap}
+.toolbar .arch-link:hover{color:var(--accent)}
+#search{flex:1;min-width:220px}
+html{scroll-behavior:smooth}
+nav.sections{position:sticky;top:0;z-index:40;display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;margin:4px -18px 16px;padding:10px 18px;background:var(--nav-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);scrollbar-width:none}
+nav.sections::-webkit-scrollbar{display:none}
+nav.sections a{flex:0 0 auto;white-space:nowrap;color:var(--text);text-decoration:none;background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:20px;font-size:14px;transition:transform .12s ease,background .12s ease,border-color .12s ease}
+nav.sections a:hover{border-color:var(--accent);color:var(--accent)}
+nav.sections a:active{transform:scale(.93);background:var(--accent-soft);border-color:var(--accent)}
+nav.sections a.ext{border-color:var(--ext-border);color:var(--ext-text);background:var(--ext-bg)}
+nav.sections a.ext:hover{border-color:var(--ext-text);color:var(--ext-text-hover);background:var(--ext-bg-hover)}
+main.grid{column-count:1;column-gap:22px}
+@media(min-width:900px){main.grid{column-count:2}}
+main.grid>section{break-inside:avoid;margin:0 0 22px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin:0;scroll-margin-top:78px}
+section h2{margin:0 0 14px;font-size:20px}
+section h2 small{display:block;font-size:13px;color:var(--muted);font-weight:normal;margin-top:4px}
+.headline{background:var(--surface2);border-radius:10px;padding:18px;margin-bottom:14px}
+.kicker{font-size:13px;color:var(--accent);font-weight:bold;margin-bottom:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.carried{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:normal}
+.headline h3{margin:0 0 10px;font-size:19px}
+.headline .himg{width:100%;max-height:230px;object-fit:cover;border-radius:8px;margin-bottom:12px;display:block}
+.headline a.himg-link{display:block}
+.headline a.himg-link:hover .himg{filter:brightness(1.07)}
+.headline h3 a{color:var(--text);text-decoration:none}
+.headline h3 a:hover{color:var(--accent)}
+.summary{margin:0 0 10px;color:var(--text2);font-size:15px}
+.comment{margin:0 0 10px;padding:10px 12px;background:var(--comment-bg);border-left:3px solid var(--comment-border);font-size:14px;color:var(--text2)}
+.meta{font-size:13px;color:var(--muted)}
+.meta a{color:var(--accent)}
+ul.secondary{list-style:none;margin:0;padding:0}
+ul.secondary li{padding:12px 0;border-top:1px solid var(--border);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+ul.secondary .t{font-size:15px}
+ul.secondary .t a{color:var(--text);text-decoration:none}
+ul.secondary .t a:hover{color:var(--accent)}
+ul.secondary .b{color:var(--muted);font-size:13px}
+ul.secondary .s{color:var(--muted);font-size:12px;margin-left:auto}
+.date{display:inline-block;background:var(--date-bg);color:var(--date-text);border:1px solid var(--date-border);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:bold;white-space:nowrap}
+.date.stale{background:var(--stale-bg);color:var(--stale);border-color:var(--stale-border)}
+.empty{color:var(--muted)}
+footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+footer .build{margin-top:8px;font-size:12px;color:var(--muted2)}
+#toTop{position:fixed;right:22px;bottom:80px;width:46px;height:46px;border-radius:50%;background:var(--surface);border:none;color:var(--accent);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:50;padding:0}
+#toTop svg{width:40px;height:40px;display:block}
+#toTop:hover{background:var(--surface2)}
+#toTop.show{display:flex}
+a{color:var(--accent)}
+.rss-link{display:inline-flex;align-items:center;gap:4px}
+/* 一键复制按钮（2026-10-07） */
+.copy-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;padding:2px 8px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s;line-height:1.6}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.copy-btn.ok{border-color:#2da44e;color:#2da44e}
+.meta .copy-btn{margin-left:8px}
+ul.secondary li .copy-btn{flex-shrink:0}
+/* 一键搜索按钮（2026-10-07）：a 标签，样式对齐 copy-btn */
+.search-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;padding:2px 8px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s;line-height:1.6;text-decoration:none;display:inline-block}
+.search-btn:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+.meta .search-btn{margin-left:6px}
+ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
+
+/* 主题切换按钮 */
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0;transition:border-color .15s,color .15s}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle svg{width:19px;height:19px}
+.theme-toggle .icon-sun{display:none}
+:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+/* pagefind 搜索框跟随主题 */
+.pagefind-ui{--pagefind-ui-primary:var(--accent);--pagefind-ui-text:var(--text);--pagefind-ui-background:var(--surface);--pagefind-ui-border:var(--border);--pagefind-ui-tag:var(--surface2);--pagefind-ui-font:inherit}
+
+/* 装饰标题样式（中性占位，见 docs/SETUP.md 第 6 节按沟通定制） */
+.wm-a{display:inline-flex;flex-direction:column;line-height:1;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" data-pagefind-ignore>
+    <div class="head-row">
+      <h1><a class="brand" href="/"><span class="site-name">{{SITE_NAME}}</span></a></h1>
+      <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
+      </button>
+    </div>
+    <p>{{TAGLINE}}</p>
+  </header>
+
+  {{TG_BANNER}}
+
+  <div class="toolbar" data-pagefind-ignore>
+    <div id="search"><div class="pf-wrap"><input class="pf-placeholder" type="text" id="pf-placeholder" placeholder="搜索本站…" aria-label="搜索本站" autocomplete="off"><kbd class="pf-kbd" title="按 / 快速搜索">/</kbd></div></div>
+    <select id="archive" aria-label="往期归档">
+      <option value="">往期归档…</option>
+      {{ARCHIVE_OPTS}}
+    </select>
+    <a href="/archive/" class="arch-link">全部归档 →</a>
+    <a href="/feed.xml" class="rss-link" title="RSS 订阅">📡 RSS</a>
+  </div>
+
+  {{DIGEST}}
+
+  <nav class="sections" data-pagefind-ignore>{{NAV}}</nav>
+
+  <main class="grid">
+    <span data-pagefind-meta="title" style="display:none">{{SITE_NAME}} · {{DATE}}</span>
+    {{SECTIONS}}
+  </main>
+
+  <footer data-pagefind-ignore>
+    <strong>免责声明：</strong>{{DISCLAIMER}}
+    <div class="build">本期日期：{{DATE}} · 构建于 {{BUILD_TIME}} · <a href="/about/">关于我们</a> · <a href="/feed.xml">RSS 订阅</a> · <a href="/about/#contact">发现错误？报错</a></div>
+  </footer>
+</div>
+
+<button id="toTop" aria-label="返回顶部" title="返回顶部"><svg viewBox="0 0 46 46" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="23" cy="23" r="19" stroke-width="2"/><path d="M23 4.5v3M23 38.5v3M4.5 23h3M38.5 23h3" stroke-width="1.8"/><path d="M23 31V15M16.5 21.5L23 15l6.5 6.5" stroke-width="2.6"/></g></svg></button>
+<script>
+/* Pagefind 延迟加载（2026-10-07）：首屏不加载 120KB 的 pagefind-ui.js，用户第一次聚焦/点击搜索框时再加载 */
+(function(){
+  var loaded = false, loading = false;
+  function initPagefind(){
+    if (loaded || loading) return;
+    loading = true;
+    var sc = document.createElement('script');
+    sc.src = '/pagefind/pagefind-ui.js';
+    sc.onload = function(){
+      loading = false;
+      if (window.PagefindUI) {
+        var container = document.getElementById('search');
+        var ph = document.getElementById('pf-placeholder');
+        var typed = ph ? ph.value : '';
+        container.innerHTML = ''; /* pagefind 以 append 方式挂载，不会自己清空容器 */
+        new PagefindUI({ element: '#search', showSubResults: true, translations: { placeholder: '搜索本站…' } });
+        loaded = true;
+        /* 真实搜索框里也补上 "/" 徽标：占位 input 在 init 时被 innerHTML='' 清掉，徽标会一起消失 */
+        var form = container.querySelector('.pagefind-ui__form');
+        if (form && !form.querySelector('.pf-kbd')) {
+          var kbd = document.createElement('kbd');
+          kbd.className = 'pf-kbd';
+          kbd.title = '按 / 快速搜索';
+          kbd.textContent = '/';
+          form.appendChild(kbd);
+        }
+        var real = document.querySelector('#search .pagefind-ui__search-input');
+        if (real) { real.value = typed; real.focus(); }
+      } else {
+        document.getElementById('search').style.display = 'none';
+      }
+    };
+    sc.onerror = function(){ document.getElementById('search').style.display = 'none'; };
+    document.head.appendChild(sc);
+  }
+  var ph = document.getElementById('pf-placeholder');
+  if (ph) {
+    ph.addEventListener('focus', initPagefind);
+    ph.addEventListener('click', initPagefind);
+  }
+  /* "/" 快捷键聚焦搜索（2026-10-08）：输入框内不触发 */
+  document.addEventListener('keydown', function(e){
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
+    e.preventDefault();
+    var ph2 = document.getElementById('pf-placeholder');
+    if (ph2) ph2.focus();
+    else {
+      var real = document.querySelector('#search .pagefind-ui__search-input');
+      if (real) real.focus();
+    }
+  });
+})();
+</script>
+<script>
+document.getElementById('archive').addEventListener('change', function(e){
+  if (e.target.value) location.href = e.target.value;
+});
+window.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('toTop');
+  window.addEventListener('scroll', function(){
+    btn.classList.toggle('show', window.scrollY > 400);
+  }, { passive: true });
+  btn.addEventListener('click', function(){
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  /* 一键复制标题+原文链接（2026-10-07） */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('.copy-btn');
+    if (!b) return;
+    var text = b.getAttribute('data-title') + '\n' + b.getAttribute('data-url');
+    var done = function(){
+      b.classList.add('ok'); b.textContent = '已复制';
+      setTimeout(function(){ b.classList.remove('ok'); b.textContent = '复制'; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function(){ fallback(); });
+    } else { fallback(); }
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(err) {}
+      document.body.removeChild(ta);
+    }
+  });
+  var tgBanner = document.getElementById('tg-banner');
+  if (tgBanner) {
+    if (localStorage.getItem('tg-banner-closed') === '1') {
+      tgBanner.style.display = 'none';
+    } else {
+      tgBanner.querySelector('.close').addEventListener('click', function(){
+        tgBanner.style.display = 'none';
+        try { localStorage.setItem('tg-banner-closed', '1'); } catch(e) {}
+      });
+    }
+  }
+});
+</script>
+<script>
+/* 主题切换：两态（浅色/深色），首次跟随系统，手动切换后记住 */
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('theme-toggle');
+  var metaTheme = document.getElementById('meta-theme-color');
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
+  var init = root.getAttribute('data-theme') || 'light';
+  applyMeta(init); applyLabel(init);
+  if(btn){
+    btn.addEventListener('click', function(){
+      var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
+      applyMeta(next); applyLabel(next);
+    });
+  }
+  /* 未手动选择时，系统主题变化则跟随 */
+  try{
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function(e){
+      try{
+        if(!localStorage.getItem('newsforge-theme')){
+          var t = e.matches ? 'dark' : 'light';
+          root.setAttribute('data-theme', t);
+          applyMeta(t); applyLabel(t);
+        }
+      }catch(err){}
+    };
+    if(mq.addEventListener) mq.addEventListener('change', onChange);
+    else if(mq.addListener) mq.addListener(onChange);
+  }catch(e){}
+})();
+</script>
+<script>
+/* 地域内容过滤：CN IP 隐藏敏感内容（2026-10-06，A方案：防随手访客） */
+(function(){
+  function hideSensitive(){
+    var sens = document.querySelectorAll('[data-sensitive="1"]');
+    if(!sens.length) return;
+    sens.forEach(function(el){ el.style.display = 'none'; });
+    // 板块内无可见内容则隐藏整个板块 + 对应导航标签
+    document.querySelectorAll('main section[id]').forEach(function(sec){
+      var items = sec.querySelectorAll('article.headline, ul.secondary li');
+      if(!items.length) return;
+      var anyVisible = Array.prototype.some.call(items, function(el){ return el.style.display !== 'none'; });
+      if(!anyVisible){
+        sec.style.display = 'none';
+        var pill = document.querySelector('nav.sections a[href="#' + sec.id + '"]');
+        if(pill) pill.style.display = 'none';
+      }
+    });
+    /* 要览条：敏感条目隐藏后，若无可见条目则隐藏整个"今日最值得看"模块 */
+    var dp = document.querySelector('.digest-picks');
+    if(dp){
+      var anyPick = Array.prototype.some.call(dp.querySelectorAll('li'), function(el){ return el.style.display !== 'none'; });
+      if(!anyPick) dp.style.display = 'none';
+    }
+  }
+  try{
+    fetch('/api/geo').then(function(r){ return r.json(); }).then(function(g){
+      if(g && g.isCN) hideSensitive();
+    }).catch(function(){});
+  }catch(e){}
+  /* 移动端搜索下拉框：宽度撑满 toolbar，与归档日期右边缘对齐（JS 内联样式，优先级最高） */
+  function alignSearchDropdown(){
+    var toolbar = document.querySelector('.toolbar');
+    var search = document.querySelector('#search');
+    var pfui = document.querySelector('#search .pagefind-ui');
+    if(!toolbar || !search) return;
+    if(window.innerWidth <= 768){
+      toolbar.style.position = 'relative';
+      search.style.position = 'static';
+      if(pfui) pfui.style.position = 'static';
+    }else{
+      toolbar.style.position = '';
+      search.style.position = '';
+      if(pfui) pfui.style.position = '';
+    }
+  }
+  alignSearchDropdown();
+  window.addEventListener('resize', alignSearchDropdown);
+})();
+</script>
+</body>
+</html>

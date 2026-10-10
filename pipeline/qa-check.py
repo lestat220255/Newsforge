@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""Newsforge 全站 QA 检查（后端）。
+用法: python3 pipeline/qa-check.py [--date YYYY-MM-DD]
+检查项: 配置 / edition 结构 / 字数 / 不变式 / 图片对应 / 跨期 / JSON 文件 / 脚本语法 / detailDate 链式 / URL 闭合
+退出码: 0=全过, 1=有失败
+"""
+import json, os, re, subprocess, sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(ROOT, 'data')
+EDITIONS = os.path.join(DATA, 'editions')
+PUBLIC_IMG = os.path.join(ROOT, 'public', 'images')
+
+passed, failed = [], []
+
+def ok(name):
+    passed.append(name)
+
+def fail(name, detail=''):
+    failed.append(f'{name}: {detail}')
+
+def load_json(path):
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
+
+# ---------- 1. 脚本语法 ----------
+for script in ['pipeline/run.js', 'pipeline/probe-sources.js', 'pipeline/fetch-text.js', 'pipeline/topics.js']:
+    r = subprocess.run(['node', '--check', script], cwd=ROOT, capture_output=True)
+    if r.returncode == 0:
+        ok(f'语法 {script}')
+    else:
+        fail(f'语法 {script}', r.stderr.decode()[:200])
+
+# ---------- 2. config.js 可加载、10 板块（2026-10-09：+汽车圈） ----------
+r = subprocess.run(['node', '-e',
+    "import('./pipeline/config.js').then(m=>{console.log(JSON.stringify({n:m.SECTIONS.length,ids:m.SECTIONS.map(s=>s.id)}))})"],
+    cwd=ROOT, capture_output=True, text=True)
+try:
+    cfg = json.loads(r.stdout.strip().splitlines()[-1])
+    if cfg['n'] == 10:
+        ok('config 10 板块')
+    else:
+        fail('config 10 板块', f"实际 {cfg['n']}")
+    # 每个 source 有 name/type
+    r2 = subprocess.run(['node', '-e',
+        "import('./pipeline/config.js').then(m=>{const bad=[];for(const s of m.SECTIONS)for(const src of s.sources||[])if(!src.name||!src.type)bad.push(s.id);console.log(JSON.stringify(bad))})"],
+        cwd=ROOT, capture_output=True, text=True)
+    bad = json.loads(r2.stdout.strip().splitlines()[-1])
+    if not bad:
+        ok('config sources 字段完整')
+    else:
+        fail('config sources 字段完整', str(bad))
+except Exception as e:
+    fail('config 加载', str(e)[:150])
+
+# ---------- 3. 最新 edition 结构与字数 ----------
+dates = sorted(f[:10] for f in os.listdir(EDITIONS) if re.match(r'\d{4}-\d{2}-\d{2}\.json$', f))
+date = sys.argv[sys.argv.index('--date') + 1] if '--date' in sys.argv else dates[-1]
+ed = load_json(os.path.join(EDITIONS, f'{date}.json'))
+
+HL_REQ = ['title', 'summary', 'comment', 'analysis', 'url', 'publishedAt', 'source']
+IT_REQ = ['title', 'blurb', 'summary', 'analysis', 'url', 'publishedAt', 'source']
+for sec in ed['sections']:
+    sid = sec['id']
+    if sec.get('hidden'):
+        if sec.get('headline') or sec.get('items'):
+            fail(f'{sid} hidden 板块仍有内容', '')
+        else:
+            ok(f'{sid} hidden 为空')
+        continue
+    h = sec.get('headline') or {}
+    for k in HL_REQ:
+        if not h.get(k):
+            fail(f'{sid} 头条缺字段 {k}', '')
+    if len(h.get('summary', '')) > 200:
+        fail(f'{sid} 头条摘要超 200 字', str(len(h.get('summary', ''))))
+    if len(h.get('analysis', '')) > 500:
+        fail(f'{sid} 头条分析超 500 字', str(len(h.get('analysis', ''))))
+    if not str(h.get('url', '')).startswith('http'):
+        fail(f'{sid} 头条 url 非法', h.get('url', '')[:50])
+    # 不变式
+    for it in sec.get('items', []):
+        for k in IT_REQ:
+            if not it.get(k):
+                fail(f'{sid} 次条缺字段 {k}', it.get('title', '')[:20])
+        if len(it.get('blurb', '')) > 20:
+            fail(f'{sid} 次条 blurb 超 20 字', it.get('title', '')[:20])
+        if len(it.get('summary', '')) > 200:
+            fail(f'{sid} 次条摘要超 200 字', it.get('title', '')[:20])
+        if it.get('unverified'):
+            if it.get('hot'):
+                fail(f'{sid} 待确认条目带 hot', it.get('title', '')[:20])
+            if it.get('multi_source'):
+                fail(f'{sid} 待确认条目 multi_source=true', it.get('title', '')[:20])
+    if h.get('unverified') and h.get('hot'):
+        fail(f'{sid} 头条待确认却带 hot', '')
+    if len(sec.get('items', [])) <= 5:
+        ok(f'{sid} 次条 ≤5')
+    else:
+        fail(f'{sid} 次条超 5', str(len(sec.get('items', []))))
+    # 25. keyFacts（2026-10-08）：有则 3-6 条、每条 ≤30 字
+    for entry, label in [(h, '头条')] + [(it, f'次条{i}') for i, it in enumerate(sec.get('items', []))]:
+        kf = entry.get('keyFacts')
+        if kf is None:
+            continue
+        if not isinstance(kf, list) or not (3 <= len(kf) <= 6):
+            fail(f'{sid} {label} keyFacts 条数非法', f'{label}:{entry.get("title","")[:20]} n={len(kf) if isinstance(kf, list) else "?"}')
+            continue
+        for f in kf:
+            if len(str(f)) > 30:
+                fail(f'{sid} {label} keyFacts 超 30 字', str(f)[:34])
+                break
+        else:
+            ok(f'{sid} {label} keyFacts 合规')
+ok(f'{date} 结构与字数检查完成')
+
+# 26. dailyDigest（2026-10-09 起）：topPicks 只指向 hot 头条、≤3 条；oneLiner ≤40 字
+dd = ed.get('dailyDigest')
+if dd is not None:
+    picks = dd.get('topPicks', [])
+    if not isinstance(picks, list) or len(picks) > 3:
+        fail(f'{date} dailyDigest topPicks 超 3 条', str(len(picks) if isinstance(picks, list) else '?'))
+    else:
+        sec_by_id = {s['id']: s for s in ed['sections']}
+        bad = []
+        for p in picks:
+            sec = sec_by_id.get(p.get('section')) or {}
+            h = sec.get('headline') or {}
+            if p.get('index') != 0 or not h.get('hot') or sec.get('hidden'):
+                bad.append(str(p.get('section')))
+        if bad:
+            fail(f'{date} dailyDigest topPicks 非 hot 头条', ','.join(bad))
+        else:
+            ok(f'{date} dailyDigest topPicks 合规')
+    if len(str(dd.get('oneLiner', ''))) > 40:
+        fail(f'{date} dailyDigest oneLiner 超 40 字', str(dd.get('oneLiner'))[:44])
+    else:
+        ok(f'{date} dailyDigest oneLiner 合规')
+
+# ---------- 4. 图片对应 ----------
+missing = []
+for sec in ed['sections']:
+    imgs = []
+    h = sec.get('headline') or {}
+    if h.get('image'):
+        imgs.append(h['image'])
+    for it in sec.get('items', []):
+        if it.get('hot') and it.get('image'):
+            imgs.append(it['image'])
+    for im in imgs:
+        p = os.path.join(ROOT, 'public' + im + '.b64')
+        if not os.path.exists(p):
+            missing.append(im)
+if not missing:
+    ok('图片 b64 一一对应')
+else:
+    fail('图片 b64 一一对应', '; '.join(missing[:5]))
+
+# ---------- 5. 沿用 ≤1 天 ----------
+for sec_id in [s['id'] for s in ed['sections']]:
+    streak = 0
+    for d in reversed(dates):
+        e = load_json(os.path.join(EDITIONS, f'{d}.json'))
+        s = next((x for x in e['sections'] if x['id'] == sec_id), None)
+        if s and s.get('carried'):
+            streak += 1
+        else:
+            break
+    if streak > 1:
+        fail('沿用连续≤1天', f'{sec_id} 连续 {streak} 天')
+ok('沿用连续≤1天')
+
+# ---------- 6. 详情页 URL 跨期去重（同 URL 必须同标题；沿用复用原 URL 是设计） ----------
+seen = {}
+dups = []
+for d in dates:
+    e = load_json(os.path.join(EDITIONS, f'{d}.json'))
+    for s in e['sections']:
+        for idx, entry in enumerate([s.get('headline')] + list(s.get('items', []))):
+            if not entry:
+                continue
+            url = f"/detail/{s.get('detailDate', d)}/{s['id']}-{idx}/"
+            title = entry.get('title', '')
+            if url in seen and seen[url] != title:
+                dups.append(f'{url} 标题冲突: {seen[url][:15]} vs {title[:15]}')
+            seen[url] = title
+if not dups:
+    ok('详情页 URL 跨期无标题冲突')
+else:
+    fail('详情页 URL 跨期无标题冲突', '; '.join(dups[:5]))
+
+# ---------- 7. 数据文件 ----------
+for f in ['source-health.json', 'corrections.json']:
+    p = os.path.join(DATA, f)
+    try:
+        load_json(p)
+        ok(f'data/{f} 合法 JSON')
+    except Exception as e:
+        fail(f'data/{f} 合法 JSON', str(e)[:100])
+p = os.path.join(DATA, 'disabled-sources.json')
+if os.path.exists(p):
+    try:
+        load_json(p)
+        ok('data/disabled-sources.json 合法')
+    except Exception as e:
+        fail('data/disabled-sources.json 合法', str(e)[:100])
+else:
+    ok('data/disabled-sources.json 不存在（无禁用源）')
+
+# ---------- 8. detailDate 链式与 URL 闭合性（2026-10-08）----------
+eds = {}
+for d in dates:
+    eds[d] = load_json(os.path.join(EDITIONS, f'{d}.json'))
+
+def sec_of(ed, sid):
+    for s in ed.get('sections', []):
+        if s.get('id') == sid:
+            return s
+    return None
+
+# 23. detailDate 无链式：指向的目标期数该板块必须是生成点（detailDate 缺失或自指）
+chained = []
+for d in dates:
+    for s in eds[d].get('sections', []):
+        dd = s.get('detailDate')
+        if not dd or dd == d:
+            continue
+        if dd not in eds:
+            chained.append(f'{d}/{s["id"]}: detailDate={dd} 期数不存在')
+            continue
+        ts = sec_of(eds[dd], s['id'])
+        tdd = (ts.get('detailDate') if ts else None) or dd
+        if not ts:
+            chained.append(f'{d}/{s["id"]}: detailDate={dd} 目标期数无此板块')
+        elif tdd != dd:
+            chained.append(f'{d}/{s["id"]}: detailDate={dd} 链式（目标仍指向 {tdd}）')
+if not chained:
+    ok('detailDate 无链式指向')
+else:
+    fail('detailDate 无链式指向', '; '.join(chained[:5]))
+
+# 24. detail URL 闭合性：所有被引用（首页/归档/话题）的详情 URL 必须实际生成
+generated, referenced = set(), set()
+for d in dates:
+    for s in eds[d].get('sections', []):
+        if s.get('empty'):
+            continue
+        dd = s.get('detailDate') or d
+        n = (1 if s.get('headline') else 0) + len(s.get('items', []))
+        for i in range(n):
+            u = f'/detail/{dd}/{s["id"]}-{i}/'
+            referenced.add(u)
+            if dd == d:
+                generated.add(u)
+missing = referenced - generated
+if not missing:
+    ok('detail URL 引用闭合（无死链）')
+else:
+    fail('detail URL 引用闭合（无死链）', '; '.join(sorted(missing)[:8]))
+
+# ---------- 报告 ----------
+print(f'\n===== QA 后端检查 {date} =====')
+print(f'通过 {len(passed)} / 失败 {len(failed)}')
+for f in failed:
+    print('  FAIL:', f)
+sys.exit(1 if failed else 0)

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('newsforge-theme');
+    if(t !== 'light' && t !== 'dark'){
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', t);
+    var mc = document.getElementById('meta-theme-color');
+    if(mc) mc.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea');
+  }catch(e){}
+})();
+</script>
+<title>关于我们 · {{SITE_NAME}}</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{SITE_NAME}}">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="关于我们 · {{SITE_NAME}}">
+<meta property="og:description" content="{{TAGLINE}}">
+<meta property="og:url" content="{{SITE_URL}}/about/">
+<meta name="twitter:card" content="summary">
+<link rel="alternate" type="application/rss+xml" title="Newsforge 每日资讯" href="/feed.xml">
+<style>
+
+:root{
+  color-scheme:light;
+  --bg:#f7f3ea; --surface:#ffffff; --surface2:#f5f1e8; --text:#17202e; --text2:#3d4a5f;
+  --muted:#5a6678; --muted2:#8a94a8; --accent:#1668dc; --accent-hover:#2f7fe0;
+  --accent-soft:rgba(22,104,220,.12); --on-accent:#ffffff; --border:#dde3ec;
+  --wm-a1:#1a3a5c; --wm-a2:#3d7dc4;
+  --shadow:0 4px 14px rgba(20,30,50,.12);
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --wm-a1:#8fc1f5; --wm-a2:#d4e6fb;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme]){
+  color-scheme:dark;
+  --bg:#0f1419; --surface:#1a2230; --surface2:#232f45; --text:#e8edf3; --text2:#cdd7e4;
+  --muted:#9aa7bd; --muted2:#8a94a8; --accent:#4da3ff; --accent-hover:#6cb5ff;
+  --accent-soft:rgba(77,163,255,.16); --on-accent:#0f1419; --border:#2c3a52;
+  --shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;line-height:1.75}
+.wrap{max-width:860px;margin:0 auto;padding:24px 20px}
+header.top{margin-bottom:24px}header.top h1{font-size:24px;margin:0}header.top h1 a{color:var(--text);text-decoration:none}
+a{color:var(--accent)}h2{font-size:19px;margin:32px 0 12px;color:var(--text)}h3{font-size:16px;margin:24px 0 8px}
+p,li{font-size:15px}ul{padding-left:22px}li{margin-bottom:6px}
+footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:16px 0}
+
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.theme-toggle svg{width:17px;height:17px}
+.theme-toggle .icon-sun{display:none}
+:root[data-theme="dark"] .theme-toggle .icon-sun{display:block}
+:root[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+
+/* 装饰标题样式（中性占位，见 docs/SETUP.md 第 6 节按沟通定制） */
+.wm-a{display:inline-flex;flex-direction:column;line-height:1;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top" data-pagefind-ignore><h1><a href="/">← <span class="wm-a"><span class="w1">NEWSFORGE</span><span class="w2">DAILY</span></span></a></h1>
+    <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
+    </button></header>
+
+  <h2>关于我们</h2>
+  <p><strong>{{SITE_NAME}}</strong> 是面向中文读者的资讯聚合站，聚焦网络工具、开源与海外生活，兼顾国际要闻。</p>
+  <p>本站内容由 AI 自动抓取、翻译、摘要与点评，站长会做人工抽查，但无法逐条核实。请注意甄别，重要事项以官方渠道为准。</p>
+
+  <h2>编辑原则</h2>
+  <div class="card">
+  <ul>
+    <li><strong>宁缺毋滥</strong>：相关性不够的候选一律舍弃，不为凑满条数降低标准；当天无够格内容则沿用前期版本并明确标注。</li>
+    <li><strong>信源优先</strong>：优先选择有多家媒体报道的新闻；每条链接原样引用出处，不编造。</li>
+    <li><strong>只陈述，不推断</strong>：摘要与分析只写公开报道明确提到的内容，不确定的标注"待确认"。</li>
+    <li><strong>红线</strong>：不收以特定个人为主要焦点的新闻；不做操作教程；不做投资建议。</li>
+    <li><strong>头条摘要完整呈现</strong>：首页每条头条直接展示完整摘要与一句话点评，不用点进详情页也能读完当天的全部头条；不截断引流，不玩标题游戏。</li>
+    <li><strong>可信度标记</strong>：「待确认」表示单信源报道、关键信息尚未经多方证实；「多信源」表示有多家独立媒体交叉报道。不确定的我们会明说。</li>
+  </ul>
+  </div>
+
+  <h2 id="contact">纠错与联系</h2>
+  <p>如果你发现事实错误、链接失效或有其他建议，欢迎通过以下方式联系：</p>
+  <ul>
+    {{TG_CHANNEL_LINE}}
+    <li>邮件：<a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a></li>
+  </ul>
+  <p style="color:var(--muted);font-size:13px">看到后会尽快核实修正，感谢每一位较真的人。</p>
+  <p><a href="/corrections/">更正记录</a>：我们改过什么、为什么改，都记在这里。</p>
+
+  <footer data-pagefind-ignore>
+    <strong>免责声明：</strong>{{DISCLAIMER}}<br>
+    <a href="/">返回首页</a> · <a href="/feed.xml">RSS 订阅</a>
+  </footer>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById('theme-toggle');
+  var metaTheme = document.getElementById('meta-theme-color');
+  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#0f1419' : '#f7f3ea'); }
+  function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
+  var init = root.getAttribute('data-theme') || 'light';
+  applyMeta(init); applyLabel(init);
+  if(btn){
+    btn.addEventListener('click', function(){
+      var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
+      applyMeta(next); applyLabel(next);
+    });
+  }
+  try{
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function(e){
+      try{
+        if(!localStorage.getItem('newsforge-theme')){
+          var t = e.matches ? 'dark' : 'light';
+          root.setAttribute('data-theme', t);
+          applyMeta(t); applyLabel(t);
+        }
+      }catch(err){}
+    };
+    if(mq.addEventListener) mq.addEventListener('change', onChange);
+    else if(mq.addListener) mq.addListener(onChange);
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
