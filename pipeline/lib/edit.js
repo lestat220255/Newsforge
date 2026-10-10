@@ -19,7 +19,10 @@ async function callLLM(section, items) {
         `${i + 1}. ${it.title}\n   来源: ${it.source}${it.supplement ? ' [补充源·相关度可能较低]' : ''} | 时间: ${it.publishedAt || '未知'} | 链接: ${it.url}`,
     )
     .join('\n');
-  const audience = SITE.audience ? `（面向${SITE.audience}）` : '';
+  const audienceRaw = SITE.audience;
+  const audience = audienceRaw
+    ? `（面向${Array.isArray(audienceRaw) ? audienceRaw.join('、') : audienceRaw}）`
+    : '';
   const headlineRule = section.editorial?.headlineRule
     ? `   头条权重规则（模块自定义，最高优先级）：${section.editorial.headlineRule}\n`
     : '';

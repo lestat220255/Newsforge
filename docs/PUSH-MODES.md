@@ -12,6 +12,18 @@
 | `.github/workflows/` | ❌ 403 写不了（缺专用权限） | ✅ 能写 |
 | 配置成本 | 零（装 App 即用） | 用户亲手建一次 token（约 2 分钟） |
 
+## 仓库地址验证（ONBOARDING 第 1 步）
+
+问完仓库地址**立即验证**，别等到推送才发现没权限：调 `GET /repos/{owner}/{repo}`：
+
+| 返回 | 含义 | 告诉用户怎么做 |
+|---|---|---|
+| 404 | 地址错，或凭证无权访问 | ① 检查拼写；② 私有仓：确认 PAT 勾了 `repo` / GitHub App 设置里选中了该仓库 |
+| 200，`permissions.push=false` | 只有读权限 | PAT：重建 token 勾 `repo`；App：重装时给 Contents 写权限 |
+| 200，`push=true` | 通过 | 记下地址，后面 clone/推送都用它 |
+
+**私有仓/权限不足时，当场触发下面的 PAT 配置流程**，配好、验证通过再往下走。
+
 ## PAT 配置（Agent 引导用户，✋ 手动创建）
 
 1. ✋ 用户：GitHub → Settings → Developer settings → Personal access tokens → **Tokens (classic)** → Generate new token (classic)

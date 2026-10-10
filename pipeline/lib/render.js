@@ -661,7 +661,8 @@ async function renderAll({ today } = {}) {
     .replaceAll('{{SITE_URL}}', esc(SITE.url))
     .replaceAll('{{TAGLINE}}', esc(SITE.tagline))
     .replaceAll('{{DISCLAIMER}}', esc(SITE.disclaimer))
-    .replaceAll('{{CONTACT_EMAIL}}', esc(SITE.contactEmail || ''))
+    .replaceAll('{{CONTACT_EMAIL_LINE}}', SITE.contactEmail
+      ? `<li>邮件：<a href="mailto:${esc(SITE.contactEmail)}">${esc(SITE.contactEmail)}</a></li>` : '')
     .replaceAll('{{TG_CHANNEL_LINE}}', (FEATURES.telegram.enabled && FEATURES.telegram.channel)
       ? `<li>Telegram 频道：<a href="https://t.me/${esc(FEATURES.telegram.channel)}" target="_blank" rel="noopener">@${esc(FEATURES.telegram.channel)}</a>（每日头条推送）</li>` : '');
   mkdirSync(join(DIST, 'about'), { recursive: true });
