@@ -2,6 +2,8 @@
 dist/
 # 图片二进制（只进 .b64 文本，见 docs/SCRAPING.md 图片策略）
 public/images/*.webp
+# R2 默认开启：b64 文本也不进仓库（图片走 R2，见 docs/R2-IMAGES.md）
+public/images/*.webp.b64
 public/fonts/*.woff2
 # 抓取候选（7 天清理，不进仓库）
 data/candidates/

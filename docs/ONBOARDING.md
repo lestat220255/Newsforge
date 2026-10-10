@@ -69,7 +69,7 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 1. ✋ 用户手动注册/登录 Cloudflare（免费账号就行）
 2. ✋ 用户手动：Workers & Pages → Create → Pages → Connect to Git → 选中刚才的仓库
 3. ✋ 构建配置（让用户照抄）：
-   - 构建命令：`npm install && node pipeline/run.js --render-only && npx --yes pagefind --site dist`
+   - 构建命令：`npm install && node pipeline/run.js --render-only && npx pagefind --site dist`
    - 输出目录：`dist`
    - 环境变量：`NODE_VERSION` = `20`
    - 注意：构建时只渲染已推送的 edition，不抓取（抓取是定时任务里做的，见第 9 步）
@@ -81,7 +81,7 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 
 **默认 B（R2，`features.r2.enabled=true`）**，未配好密钥前自动回退 A，用户也可明确说"不用 R2"选 A。
 
-- 选 A → `site.json` 里 `features.r2.enabled=false`
+- 选 A → `site.json` 里 `features.r2.enabled=false`，**并删掉 `.gitignore` 里 `public/images/*.webp.b64` 那行**（否则图片 b64 进不了仓库，构建时无图）
 - 选 B → 按 `docs/R2-IMAGES.md` 的"Agent 引导用户的完整流程"一步一步带用户走：
   1. ✋ 用户建 R2 bucket
   2. ✋ 用户开公网访问（正式站推荐绑自定义图片域名，如 `img.example.com`）
