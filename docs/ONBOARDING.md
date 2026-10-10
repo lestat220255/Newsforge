@@ -69,9 +69,10 @@ grill 结束后再进入第 1 步。**不许跳过这一步。**
 1. ✋ 用户手动注册/登录 Cloudflare（免费账号就行）
 2. ✋ 用户手动：Workers & Pages → Create → Pages → Connect to Git → 选中刚才的仓库
 3. ✋ 构建配置（让用户照抄）：
-   - 构建命令：`npm run build`
-   - 输出目录：`public`
-   - Node 版本：18+
+   - 构建命令：`npm install && node pipeline/run.js --render-only && npx --yes pagefind --site dist`
+   - 输出目录：`dist`
+   - 环境变量：`NODE_VERSION` = `20`
+   - 注意：构建时只渲染已推送的 edition，不抓取（抓取是定时任务里做的，见第 9 步）
 4. ✋ 点 Deploy，等构建完成
 5. 🤖 你 curl 新站点的 URL，确认 HTTP 200 且标题是用户的网站名
 6. 如果第 1 步用户要了自定义域名：✋ 指引用户在 Pages 项目里 Custom domains → Set up a custom domain，按 Cloudflare 的提示加 DNS 记录
