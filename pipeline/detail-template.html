@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141417">
 <script>
 /* 主题初始化：同步执行，必须在 CSS 解析前设置 data-theme，避免主题闪烁 */
 (function(){
@@ -13,8 +14,6 @@
       t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
-    var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -41,12 +40,18 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"
 /* 可信度徽标（2026-10-07）：待确认=单信源未证实；多信源=多家独立媒体交叉报道 */
 .badge{display:inline-block;font-size:11px;line-height:1.5;padding:0 7px;border-radius:20px;margin-left:6px;vertical-align:2px;font-weight:600;white-space:nowrap}
 .badge-pending{color:var(--muted);border:1px solid var(--border);background:var(--surface2)}
-.badge-multi{color:#2ea043;border:1px solid rgba(46,160,90,.45);background:rgba(46,160,90,.1)}
+.badge-multi{color:var(--ok);border:1px solid rgba(76,196,104,.45);background:rgba(76,196,104,.06)}
 .trust-badges{margin:6px 0 0}
 .badge-update{color:var(--accent);border:1px solid var(--accent);background:var(--accent-soft)}
 .trust-badges:empty{display:none}
 
 .wrap.narrow{max-width:760px}
+header.top{padding:34px 0 10px;border-bottom:1px solid var(--border)}
+header.top .brand{color:inherit;text-decoration:none;display:flex;align-items:center}
+header.top .brand:hover{color:var(--accent)}
+header.top .logo{height:38px;width:38px;margin-right:12px;flex:none}
+.site-name{font-size:24px;font-weight:800;letter-spacing:.5px;color:var(--text)}
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .crumb{padding:18px 0 6px;font-size:13px;color:var(--muted)}
 .crumb a{color:var(--accent);text-decoration:none}
 .crumb .cur{color:var(--text)}
@@ -87,9 +92,9 @@ a{color:var(--accent)}
 
 .crumb-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .crumb{flex:1;min-width:0}
-.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0;margin-top:12px}
+.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.theme-toggle svg{width:17px;height:17px}
+.theme-toggle svg{width:19px;height:19px}
 .theme-toggle .icon-moon{display:none}
 :root[data-theme="light"] .theme-toggle .icon-sun{display:block}
 :root[data-theme="light"] .theme-toggle .icon-moon{display:none}
@@ -102,12 +107,17 @@ a{color:var(--accent)}
 </head>
 <body>
 <div class="wrap narrow">
+  <header class="top" data-pagefind-ignore>
+    <div class="head-row">
+      <div><a class="brand" href="/"><img class="logo" src="/logo.png" alt="" onerror="this.style.display='none'"><span class="site-name">{{SITE_NAME}}</span></a></div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
+      </button>
+    </div>
+  </header>
   <div class="crumb-row">
     <nav class="crumb" data-pagefind-ignore><a href="{{ARCHIVE_URL}}">首页</a> <span>/</span> <a href="{{ARCHIVE_URL}}#{{SEC_ID}}">{{SEC_NAME}}</a> <span>/</span> <span class="cur">{{TITLE_SHORT}}</span></nav>
-    <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
-    </button>
   </div>
 
   <article data-pagefind-body{{SENSITIVE_ATTR}} data-pagefind-filter="section:{{SEC_NAME}}">
@@ -148,18 +158,16 @@ a{color:var(--accent)}
 (function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
-  var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
-  applyMeta(init); applyLabel(init);
+  applyLabel(init);
   if(btn){
     btn.addEventListener('click', function(){
       var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       var next = cur === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
-      applyMeta(next); applyLabel(next);
+      applyLabel(next);
     });
   }
   try{
@@ -169,7 +177,7 @@ a{color:var(--accent)}
         if(!localStorage.getItem('newsforge-theme')){
           var t = e.matches ? 'dark' : 'light';
           root.setAttribute('data-theme', t);
-          applyMeta(t); applyLabel(t);
+          applyLabel(t);
         }
       }catch(err){}
     };

@@ -44,7 +44,7 @@ newsforge/
 
 - 完整流程见 **docs/R2-IMAGES.md**（Agent 引导用户建 bucket → 拿密钥 → 冒烟测试 → lifecycle 决策）
 - 日常：本地处理图片不上传 → 用户确认推送后 `node pipeline/run.js --upload-images --date=YYYY-MM-DD` 传 R2 → edition 改写为公网 URL → 逐个 curl 验证 → 只推 edition JSON + `data/image-dims.json`
-- R2 按月分文件夹（`YYYY-MM/文件名.webp`）；图片**永久保留不设 lifecycle**（详情页是永久归档）
+- R2 按日分文件夹（`YYYY-MM/DD/文件名.webp`）；图片**永久保留不设 lifecycle**（详情页是永久归档）
 - `.gitignore` 加 `public/images/*.webp.b64`
 
 通用铁律（两种都适用）：
@@ -72,26 +72,30 @@ newsforge/
 
 ## 6. 主题定制（CSS 变量）
 
-模板结构不要动，主题只通过 CSS 变量覆盖。在 `pipeline/template.html` 的 `:root` 里改：
+主题变量的唯一来源是 `public/theme.css`（`:root` = 深色默认，`:root[data-theme="light"]` = 浅色），7 个模板共享。模板结构不要动，主题只通过 CSS 变量覆盖：
 
 ```css
 :root {
-  --brand: #2563eb;        /* 主色 */
-  --brand-ink: #1e40af;    /* 主色深色 */
-  --bg: #ffffff;           /* 背景 */
-  --ink: #1a1a1a;          /* 正文 */
-  --muted: #6b7280;        /* 次要文字 */
-  --card: #f8fafc;         /* 卡片底 */
-  --radius: 12px;          /* 圆角 */
+  --bg: #141417;           /* 背景 */
+  --surface: #1e1e23;      /* 卡片底 */
+  --text: #f2f0ea;         /* 正文 */
+  --muted: #9c978b;         /* 次要文字 */
+  --accent: #e8a33d;        /* 强调色 */
+  --border: #34343a;        /* 边框 */
+  --border-strong: #62779a; /* 强边框（日历按钮等） */
+  --ok: #4cc468;            /* 肯定色（多信源徽标文字） */
 }
 ```
 
 logo/favicon 换 `public/` 下的对应文件即可。深色模式模板已内置，跟随系统。
 
+深色主题对比度目标（WCAG）：正文类 ≥7:1、其余文字 ≥4.5:1。改颜色时先算对比度再提交——`--muted2` / `--stale` 曾因不达标调亮过，别回退。
+
 ## 7. RSS / 归档 / 搜索
 
 - RSS（`/feed.xml`）：最新一期全部条目，构建时自动生成
-- 归档页（`/archive/`）：按日期列出往期
+- 归档页（`/archive/`）：默认只展示最新一个月 + 侧栏年份大日历选月（桌面）/底部抽屉（移动）；每月的完整归档在 `/archive/YYYY-MM/` 月页（进 sitemap，构建时按 edition 数据自动生成）；日历周一起始，无归档日期置灰，选中日期高亮
+- 沿用标注：某板块沿用前期内容时（`detailDate` ≠ 期号日期），首页/每日期页头条 kicker、归档页与话题页板块名后显示「沿用自 MM-DD」；详情页本身是原日期页面，不另标
 - 搜索：pagefind，构建时生成索引，`/` 快捷键聚焦
 - sitemap.xml + robots.txt 构建时自动生成
 

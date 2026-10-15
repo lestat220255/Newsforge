@@ -8,13 +8,13 @@
   --text:#f2f0ea;
   --text2:#d6d1c6;
   --muted:#9c978b;
-  --muted2:#7c776c;
+  --muted2:#8f8a7d; /* WCAG：on bg 5.34:1、on surface 4.82:1（旧 #7c776c 仅 4.13:1） */
   --accent:#e8a33d;
   --accent-hover:#f2b45c;
   --accent-soft:rgba(232,163,61,.14);
   --on-accent:#141417;
   --border:#34343a;
-  --stale:#7c776c;
+  --stale:#a29d90; /* WCAG：on stale-bg 5.57:1、on surface 6.13:1（旧 #7c776c 仅 3.39:1） */
   --stale-bg:#26262b;
   --stale-border:#3a3a40;
   --warn:#e8a33d;
@@ -34,6 +34,9 @@
   --banner-border:#3a3a40;
   --logo-stroke:#e8a33d;
   --shadow:0 4px 14px rgba(0,0,0,.4);
+  /* 深色主题 WCAG 对比度：正文类 ≥7:1、其余文字 ≥4.5:1（实测值见注释） */
+  --border-strong:#62779a;
+  --ok:#4cc468; /* 多信源徽标文字 on surface 7.43:1 */
 }
 :root[data-theme="light"]{
   color-scheme:light;
@@ -70,4 +73,7 @@
   --banner-border:#ddd0b8;
   --logo-stroke:#b57a1e;
   --shadow:0 4px 14px rgba(20,30,50,.12);
+  /* 浅色主题：--ok / --border-strong 与深色同名变量，浅色对比度审计暂不调整 */
+  --border-strong:var(--border);
+  --ok:#2ea043;
 }

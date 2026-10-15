@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141417">
 <script>
 (function(){
   try{
@@ -12,8 +13,6 @@
       t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
-    var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -24,6 +23,7 @@
 <meta property="og:title" content="更正记录 · {{SITE_NAME}}">
 <meta property="og:description" content="{{TAGLINE}}">
 <meta property="og:url" content="{{SITE_URL}}/corrections/">
+<meta property="og:image" content="{{SITE_URL}}/logo.png">
 <meta name="twitter:card" content="summary">
 <link rel="alternate" type="application/rss+xml" title="{{SITE_NAME}}" href="/feed.xml">
 <link rel="stylesheet" href="/theme.css">
@@ -31,9 +31,14 @@
 
 
 *{box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;line-height:1.75}
-.wrap{max-width:860px;margin:0 auto;padding:24px 20px}
-header.top{margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-header.top h1{font-size:24px;margin:0}header.top h1 a{color:var(--text);text-decoration:none;display:inline-flex;align-items:center}header.top h1 .logo{height:30px;width:30px;margin-right:10px;flex:none;border-radius:8px}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px 24px}
+header.top{padding:34px 0 10px;border-bottom:1px solid var(--border)}
+header.top h1{margin:0;font-size:30px;letter-spacing:2px;display:flex;align-items:center}
+header.top h1 a.brand{color:inherit;text-decoration:none;display:flex;align-items:center}
+header.top h1 a.brand:hover{color:var(--accent)}
+header.top h1 .logo{height:38px;width:38px;margin-right:12px;flex:none}
+.site-name{font-size:24px;font-weight:800;letter-spacing:.5px;color:var(--text)}
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 a{color:var(--accent)}h2{font-size:19px;margin:32px 0 12px;color:var(--text)}
 p,li{font-size:15px}ul{padding-left:22px}li{margin-bottom:6px}
 footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
@@ -43,9 +48,9 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color
 .card .cfix{color:var(--text2)}
 .card .creason{font-size:13px;color:var(--muted)}
 .empty{color:var(--muted);padding:32px 0;text-align:center}
-.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
+.theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
-.theme-toggle svg{width:17px;height:17px}
+.theme-toggle svg{width:19px;height:19px}
 .theme-toggle .icon-moon{display:none}
 :root[data-theme="light"] .theme-toggle .icon-sun{display:block}
 :root[data-theme="light"] .theme-toggle .icon-moon{display:none}
@@ -53,11 +58,11 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color
 </head>
 <body>
 <div class="wrap">
-  <header class="top" data-pagefind-ignore><h1><a href="/"><img class="logo" src="/logo.png" alt="" onerror="this.style.display='none'"><span class="site-name">{{SITE_NAME}}</span></a></h1>
+  <header class="top" data-pagefind-ignore><div class="head-row"><h1><a class="brand" href="/"><img class="logo" src="/logo.png" alt="" onerror="this.style.display='none'"><span class="site-name">{{SITE_NAME}}</span></a></h1>
     <button id="theme-toggle" class="theme-toggle" aria-label="切换主题" title="浅色 / 深色">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.2A8 8 0 1 1 9.8 4.5a6.6 6.6 0 0 0 9.7 9.7z" stroke-width="2"/><path d="M17.8 3.5v3.2M16.2 5.1h3.2" stroke-width="1.6"/></svg>
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-width="2"/><circle cx="12" cy="12" r="2.6" stroke-width="2"/><path d="M12 3.5v5.9M12 14.6v5.9M3.5 12h5.9M14.6 12h5.9" stroke-width="2"/></svg>
-    </button></header>
+    </button></div></header>
 
   <h2>更正记录</h2>
   <p>我们改过什么、为什么改，都记在这里。犯错不可怕，藏着不认才可怕。</p>
@@ -71,17 +76,15 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color
 (function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
-  var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   var init = root.getAttribute('data-theme') || 'light';
-  applyMeta(init);
+  
   if(btn){
     btn.addEventListener('click', function(){
       var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       var next = cur === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
-      applyMeta(next);
+      
     });
   }
 })();

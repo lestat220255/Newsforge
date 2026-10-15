@@ -1,11 +1,11 @@
-// Newsforge R2 模块纯函数测试：r2Key（按月分文件夹）、walkImages（edition 图片遍历改写）
+// Newsforge R2 模块纯函数测试：r2Key（按日分文件夹）、walkImages（edition 图片遍历改写）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { r2Key, walkImages } from './r2-images.js';
 
-test('r2Key 按日期生成月份前缀', () => {
-  assert.equal(r2Key('2026-10-10', '2026-10-10-tech-0.webp'), '2026-10/2026-10-10-tech-0.webp');
-  assert.equal(r2Key('2026-01-05', 'a.webp'), '2026-01/a.webp');
+test('r2Key 按日期生成年月/日前缀', () => {
+  assert.equal(r2Key('2026-10-10', '2026-10-10-tech-0.webp'), '2026-10/10/2026-10-10-tech-0.webp');
+  assert.equal(r2Key('2026-01-05', 'a.webp'), '2026-01/05/a.webp');
 });
 
 test('r2Key 非日期回退 misc', () => {

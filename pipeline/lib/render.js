@@ -73,7 +73,7 @@ function renderSection(sec, date) {
   const h = sec.headline;
   const headHtml = h
     ? `<article class="headline"${h.sensitive ? ' data-sensitive="1"' : ''}>
-      <div class="kicker">头条 ${sec.carried ? '<span class="carried">沿用前期版本</span>' : ''} ${dateBadge(h.publishedAt)}</div>
+      <div class="kicker">头条 ${sec.detailDate && sec.detailDate !== date ? `<span class="carried">沿用自 ${sec.detailDate.slice(5)}</span>` : ''} ${dateBadge(h.publishedAt)}</div>
       ${h.image ? `<a class="himg-link" href="${detailUrl(dDate, sec.id, 0)}" aria-label="${esc(h.title)}"><img class="himg" src="${esc(h.image)}"${imgWH(h.image)} alt="" loading="lazy"></a>` : ''}
       <h3><a href="${detailUrl(dDate, sec.id, 0)}">${hotMark(h)}${esc(h.title)}${trustBadges(h)}</a></h3>
       <p class="summary">${esc(h.summary)}</p>
@@ -144,9 +144,14 @@ function renderPage(tpl, edition, dates, canonical, showTgBanner) {
       .join('');
   })();
   const navLinks = visibleSections.map((s) => `<a href="#${esc(s.id)}">${esc(s.name)}</a>`).join('');
-  // og:image：用第一个有配图的头条， fallback 到图标
+  // 首页去掉归档下拉（归档页日历已覆盖跳转）；每日期页保留（该页无日历，是唯一跳日期入口）
+  const isHome = canonical === SITE.url + '/';
+  const archiveSelect = isHome
+    ? ''
+    : `<select id="archive" aria-label="往期归档">\n      <option value="">往期归档…</option>\n      {{ARCHIVE_OPTS}}\n    </select>`;
+  // og:image：用第一个有配图的头条，fallback 到本站 logo
   const firstImg = visibleSections.map((s) => s.headline?.image).find(Boolean);
-  const ogImage = firstImg ? absImg(firstImg) : SITE.url + '/favicon.png';
+  const ogImage = firstImg ? absImg(firstImg) : SITE.url + '/logo.png';
   const tgOn = showTgBanner && FEATURES.telegram.enabled && FEATURES.telegram.channel;
   const gridCols = { single: 1, double: 2, triple: 3 }[SITE.layout] || 2;
   const tgBanner = tgOn ? `<div class="tg-banner" id="tg-banner"><span class="msg">📡 在 Telegram 上订阅 ${esc(SITE.name)}，每早同步推送当日头条</span><a class="sub-btn" href="https://t.me/${esc(FEATURES.telegram.channel)}" target="_blank" rel="noopener">订阅 →</a><button class="close" aria-label="关闭">×</button></div>` : '';
@@ -161,6 +166,7 @@ function renderPage(tpl, edition, dates, canonical, showTgBanner) {
     .replaceAll('{{NAV}}', navLinks)
     .replaceAll('{{SECTIONS}}', sectionsHtml)
     .replaceAll('{{DIGEST}}', digestHtml)
+    .replaceAll('{{ARCHIVE_SELECT}}', archiveSelect)
     .replaceAll('{{ARCHIVE_OPTS}}', archiveOpts)
     .replaceAll('{{DISCLAIMER}}', esc(SITE.disclaimer))
     .replaceAll('{{TG_BANNER}}', tgBanner)
@@ -255,7 +261,7 @@ function renderDetail(tpl, ed, cur, prev, next, allArticles) {
   const canonical = SITE.url + cur.url;
   // 面包屑/返回首页指向文章所属日期的归档页，而非当日首页（2026-10-06 修复）
   const archiveUrl = `/archive/${ed.date}/`;
-  const ogImage = entry.image ? absImg(entry.image) : (sec.headline && sec.headline.image ? absImg(sec.headline.image) : SITE.url + '/favicon.png');
+  const ogImage = entry.image ? absImg(entry.image) : (sec.headline && sec.headline.image ? absImg(sec.headline.image) : SITE.url + '/logo.png');
   const ogDesc = summary.length > 140 ? summary.slice(0, 140) + '…' : summary;
   return tpl
     .replaceAll('{{SITE_NAME}}', esc(SITE.name))
@@ -379,8 +385,75 @@ function renderFeedXml(edition) {
   console.log(`RSS 已生成：${items.length} 条`);
 }
 
-// 归档索引页：/archive/，按月分组折叠（<details>），每组内按日期倒序，每期列头条标题+摘要
+// 月历网格（仅归档页）：周一起始；mode='anchor' 链接站内锚点，mode='page' 链接到月页 + 锚点
+function renderMonthCalendar(m, dates, latest, mode) {
+  const [y, mo] = m.split('-').map(Number);
+  const days = new Date(y, mo, 0).getDate();
+  const offset = (new Date(y, mo - 1, 1).getDay() + 6) % 7; // 周一 = 0
+  const has = new Set(dates);
+  const cells = [];
+  for (let i = 0; i < offset; i++) cells.push('<span class="cell blank"></span>');
+  for (let d = 1; d <= days; d++) {
+    const ds = `${m}-${String(d).padStart(2, '0')}`;
+    const href = mode === 'page' ? `/archive/${m}/#d-${ds}` : `#d-${ds}`;
+    cells.push(
+      has.has(ds)
+        ? `<a class="cell${ds === latest ? ' latest' : ''}" href="${href}">${d}</a>`
+        : `<span class="cell empty">${d}</span>`,
+    );
+  }
+  const wds = ['一', '二', '三', '四', '五', '六', '日']
+    .map((w) => `<span class="cell wd">${w}</span>`)
+    .join('');
+  const label =
+    mode === 'page'
+      ? `<a href="/archive/${m}/">${y} 年 ${mo} 月</a>`
+      : `${y} 年 ${mo} 月`;
+  return (
+    `<div class="cal-month"><div class="cal-label">${label}</div>` +
+    `<div class="cal-grid">${wds}${cells.join('')}</div></div>`
+  );
+}
 
+// 某月各期条目（归档索引页最新月 + 月页共用）：按日期倒序，每期列头条标题+摘要
+function renderMonthSections(m, dates) {
+  const [y, mo] = m.split('-');
+  const sections = dates
+    .map((d) => {
+      const ed = loadEdition(d);
+      if (!ed) return '';
+      const heads = [];
+      for (const sec of ed.sections) {
+        if (sec.empty || !sec.headline) continue;
+        const dDate = sec.detailDate || d;
+        const h = sec.headline;
+        heads.push(
+          `<li><span class="sec">${esc(sec.name)}</span>${dDate !== d ? `<span class="carried">沿用自 ${dDate.slice(5)}</span>` : ''}` +
+            `<span class="t"><a href="${detailUrl(dDate, sec.id, 0)}">${esc(h.title)}${trustBadges(h)}</a></span>` +
+            (h.summary ? `<p class="sum">${esc(h.summary)}</p>` : '') +
+            `</li>`,
+        );
+      }
+      if (!heads.length) return '';
+      return (
+        `<section class="ed" id="d-${d}"><h2><a href="/archive/${d}/">${d}</a>` +
+        `<span class="cnt">${heads.length} 条头条</span></h2>\n` +
+        `<ul class="hl">\n${heads.join('\n')}\n</ul></section>`
+      );
+    })
+    .filter(Boolean)
+    .join('\n');
+  if (!sections) return '';
+  const cnt = dates.length;
+  return (
+    `<details class="month" open>` +
+    `<summary>${y} 年 ${mo} 月<span class="mcnt">${cnt} 期</span></summary>\n` +
+    sections +
+    `</details>`
+  );
+}
+
+// 归档索引页：/archive/，默认展示最新一个月 + 侧栏年份大日历选月
 function renderArchiveIndex(allDates) {
   const tpl = readFileSync(join(PIPELINE_DIR, 'archive-index-template.html'), 'utf8');
   // 按月分组：{ 'YYYY-MM': [dates...] }，日期已是倒序
@@ -390,42 +463,17 @@ function renderArchiveIndex(allDates) {
     (byMonth[m] = byMonth[m] || []).push(d);
   }
   const months = Object.keys(byMonth).sort().reverse();
-  const blocks = months
-    .map((m, mi) => {
-      const [y, mo] = m.split('-');
-      const sections = byMonth[m]
-        .map((d) => {
-          const ed = loadEdition(d);
-          if (!ed) return '';
-          const heads = [];
-          for (const sec of ed.sections) {
-            if (sec.empty || !sec.headline) continue;
-            const dDate = sec.detailDate || d;
-            const h = sec.headline;
-            heads.push(
-              `<li><span class="sec">${esc(sec.name)}</span>` +
-                `<span class="t"><a href="${detailUrl(dDate, sec.id, 0)}">${esc(h.title)}${trustBadges(h)}</a></span>` +
-                (h.summary ? `<p class="sum">${esc(h.summary)}</p>` : '') +
-                `</li>`,
-            );
-          }
-          if (!heads.length) return '';
-          return (
-            `<section class="ed"><h2><a href="/archive/${d}/">${d}</a>` +
-            `<span class="cnt">${heads.length} 条头条</span></h2>\n` +
-            `<ul class="hl">\n${heads.join('\n')}\n</ul></section>`
-          );
-        })
-        .filter(Boolean)
+  const latestMonth = months[0];
+  const blocks = renderMonthSections(latestMonth, byMonth[latestMonth]);
+  // 侧栏年份大日历：按年分组，每月小日历链接到月页
+  const years = [...new Set(months.map((m) => m.slice(0, 4)))].sort().reverse();
+  const yearCalendar = years
+    .map((y) => {
+      const minis = months
+        .filter((m) => m.startsWith(y))
+        .map((m) => renderMonthCalendar(m, byMonth[m], null, 'page'))
         .join('\n');
-      if (!sections) return '';
-      const cnt = byMonth[m].length;
-      return (
-        `<details class="month"${mi === 0 ? ' open' : ''}>` +
-        `<summary>${y} 年 ${mo} 月<span class="mcnt">${cnt} 期</span></summary>\n` +
-        sections +
-        `</details>`
-      );
+      return `<div class="year-block"><h3>${y} 年</h3>\n${minis}</div>`;
     })
     .join('\n');
   const html = tpl
@@ -433,11 +481,42 @@ function renderArchiveIndex(allDates) {
     .replaceAll('{{SITE_URL}}', esc(SITE.url))
     .replaceAll('{{TAGLINE}}', esc(SITE.tagline))
     .replaceAll('{{ARCHIVE_LIST}}', blocks || '<p>暂无归档</p>')
+    .replaceAll('{{YEAR_CALENDAR}}', yearCalendar)
     .replaceAll('{{DISCLAIMER}}', esc(SITE.disclaimer))
     .replaceAll('{{BUILD_TIME}}', esc(new Date().toISOString()));
   mkdirSync(join(DIST, 'archive'), { recursive: true });
   writeFileSync(join(DIST, 'archive', 'index.html'), html);
   console.log('归档索引页已生成');
+}
+
+// 月页：/archive/YYYY-MM/，只显示该月归档
+function renderMonthPages(allDates) {
+  const tpl = readFileSync(join(PIPELINE_DIR, 'archive-month-template.html'), 'utf8');
+  const byMonth = {};
+  for (const d of allDates) {
+    const m = d.slice(0, 7);
+    (byMonth[m] = byMonth[m] || []).push(d);
+  }
+  const urls = [];
+  for (const m of Object.keys(byMonth).sort().reverse()) {
+    const [y, mo] = m.split('-');
+    const title = `${y} 年 ${mo} 月`;
+    const html = tpl
+      .replaceAll('{{SITE_NAME}}', esc(SITE.name))
+      .replaceAll('{{SITE_URL}}', esc(SITE.url))
+      .replaceAll('{{TAGLINE}}', esc(SITE.tagline))
+      .replaceAll('{{ARCHIVE_LIST}}', renderMonthSections(m, byMonth[m]))
+      .replaceAll('{{CALENDAR}}', renderMonthCalendar(m, byMonth[m], allDates[0], 'anchor'))
+      .replaceAll('{{MONTH_TITLE}}', title)
+      .replaceAll('{{MONTH}}', m)
+      .replaceAll('{{DISCLAIMER}}', esc(SITE.disclaimer))
+      .replaceAll('{{BUILD_TIME}}', esc(new Date().toISOString()));
+    mkdirSync(join(DIST, 'archive', m), { recursive: true });
+    writeFileSync(join(DIST, 'archive', m, 'index.html'), html);
+    urls.push({ loc: `${SITE.url}/archive/${m}/`, lastmod: byMonth[m][0] });
+  }
+  console.log(`月归档页已生成：${urls.length} 页`);
+  return urls;
 }
 
 function renderTopicPages(dates) {
@@ -463,7 +542,7 @@ function renderTopicPages(dates) {
         for (const t of topics) {
           if (!byTopic.has(t)) byTopic.set(t, []);
           byTopic.get(t).push({
-            date: d, secName, title: e.title || '',
+            date: d, detailDate: dDate, secName, title: e.title || '',
             url: durl, publishedAt: e.publishedAt || '',
             unverified: !!e.unverified, multi_source: !!e.multi_source, is_update: !!e.is_update,
           });
@@ -480,7 +559,7 @@ function renderTopicPages(dates) {
     const articles = byTopic.get(tname)
       .sort((a, b) => (b.publishedAt || '') > (a.publishedAt || '') ? 1 : -1);
     const listHtml = articles.map(a =>
-      `<div class="arch-item"><span class="d">${esc(a.date)}</span> <span class="s">[${esc(a.secName)}]</span> <a href="${esc(a.url)}">${esc(a.title)}${trustBadges(a)}</a></div>`
+      `<div class="arch-item"><span class="d">${esc(a.date)}</span> <span class="s">[${esc(a.secName)}]</span>${a.detailDate && a.detailDate !== a.date ? `<span class="carried">沿用自 ${a.detailDate.slice(5)}</span>` : ''} <a href="${esc(a.url)}">${esc(a.title)}${trustBadges(a)}</a></div>`
     ).join('\n');
     const url = SITE.url + topicUrl(tname);
     const html = tpl
@@ -648,6 +727,7 @@ async function renderAll({ today } = {}) {
     sitemapUrls.push({ loc: `${SITE.url}/archive/${d}/`, lastmod: d });
   }
   renderArchiveIndex(allDates);
+  const monthUrls = renderMonthPages(allDates);
   const detailUrls = renderDetailPages(dates);
   const latestEd = loadEdition(latest);
   if (latestEd) renderFeedXml(latestEd);
@@ -672,14 +752,15 @@ async function renderAll({ today } = {}) {
   sitemapUrls.push({ loc: SITE.url + '/about/', lastmod: latest });
   const topicUrls = renderTopicPages(dates);
   const correctionUrls = renderCorrections(today);
-  renderSitemap([...sitemapUrls, ...detailUrls, ...topicUrls, ...correctionUrls]);
+  renderSitemap([...sitemapUrls, ...detailUrls, ...monthUrls, ...topicUrls, ...correctionUrls]);
   renderSearchIndex(allDates);
   console.log(`渲染完成：共 ${dates.length} 期，首页 = ${latest}`);
 }
 
 export {
   renderAll, renderPage, renderSection, renderDigest, renderDetailPages,
-  renderFeedXml, renderArchiveIndex, renderTopicPages, renderCorrections,
+  renderFeedXml, renderArchiveIndex, renderMonthCalendar, renderMonthSections, renderMonthPages,
+  renderTopicPages, renderCorrections,
   renderSitemap, renderSearchIndex, assertNoChainedDetailDate,
   sourceLine, trustBadges, hotMark, extractKeywords, findRelated,
 };

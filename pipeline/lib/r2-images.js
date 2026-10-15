@@ -15,7 +15,7 @@
 //   node pipeline/lib/r2-images.js --backfill [--dry-run]      # 历史 b64 全量回填
 // 或：node pipeline/run.js --upload-images --date=YYYY-MM-DD
 //
-// 约定：R2 按月分文件夹，key = YYYY-MM/<文件名>（如 2026-10/2026-10-01-tech-0.webp）
+// 约定：R2 按日分文件夹，key = YYYY-MM/DD/<文件名>（如 2026-10/10/2026-10-01-tech-0.webp）
 // 宽高边车 data/image-dims.json（key 为完整公网 URL），渲染时用。
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
@@ -133,9 +133,9 @@ export function saveDims(dims) {
   writeFileSync(DIMS_PATH, JSON.stringify(dims, null, 2));
 }
 
-// R2 按月分文件夹：key = YYYY-MM/<文件名>（R2 无真实目录，前缀即文件夹视图）
+// R2 按日分文件夹：key = YYYY-MM/DD/<文件名>（R2 无真实目录，前缀即文件夹视图）
 export function r2Key(dateStr, filename) {
-  const m = /^\d{4}-\d{2}/.test(dateStr) ? dateStr.slice(0, 7) : 'misc';
+  const m = /^\d{4}-\d{2}-\d{2}/.test(dateStr) ? `${dateStr.slice(0, 7)}/${dateStr.slice(8, 10)}` : 'misc';
   return `${m}/${filename}`;
 }
 
@@ -184,7 +184,7 @@ export async function uploadEditionImages(date) {
     return undefined;
   });
   for (const img of [...new Set(jobs)]) {
-    const key = r2Key(date, basename(img)); // YYYY-MM/<date>-<sec>-<suffix>.webp
+    const key = r2Key(date, basename(img)); // YYYY-MM/DD/<date>-<sec>-<suffix>.webp
     const local = join(ROOT, img.replace(/^\//, ''));
     if (!existsSync(local)) {
       // 兼容 .b64 文本（历史期数）：解码后上传
@@ -257,7 +257,7 @@ export async function backfill() {
   let i = 0;
   for (const f of files) {
     const base = f.slice(0, -4); // 去掉 .b64
-    const key = r2Key(base.slice(0, 10), base); // 文件名以 YYYY-MM-DD 开头 → 按月分文件夹
+    const key = r2Key(base.slice(0, 10), base); // 文件名以 YYYY-MM-DD 开头 → 按日分文件夹
     const buf = Buffer.from(readFileSync(join(IMG_DIR, f), 'utf8'), 'base64');
     const url = await uploadBuffer(cfg, client, key, buf);
     const d = await dimsOf(buf);
@@ -272,7 +272,7 @@ export async function backfill() {
       const p = join(EDITIONS_DIR, f);
       const ed = JSON.parse(readFileSync(p, 'utf8'));
       let n = walkImages(ed, (img) => urlByPath[img]);
-      // 旧版 R2 地址（根目录 key，无月份前缀）→ 迁移到按月文件夹
+      // 旧版 R2 地址（根目录 key，无月份前缀）→ 迁移到按日文件夹
       n += walkImages(ed, (img) => {
         if (!img.startsWith(cfg.publicBaseUrl + '/')) return undefined;
         const rest = img.slice(cfg.publicBaseUrl.length + 1);

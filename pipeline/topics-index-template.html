@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141417">
 <script>
 (function(){
   try{
@@ -12,8 +13,6 @@
       t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
-    var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -26,7 +25,7 @@
 <meta property="og:title" content="话题索引 · {{SITE_NAME}}">
 <meta property="og:description" content="{{TAGLINE}}">
 <meta property="og:url" content="{{SITE_URL}}/topics/">
-<meta property="og:image" content="{{SITE_URL}}/favicon.png">
+<meta property="og:image" content="{{SITE_URL}}/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="{{SITE_URL}}/topics/">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -106,18 +105,16 @@ a{color:var(--accent)}
 (function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
-  var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
-  applyMeta(init); applyLabel(init);
+  applyLabel(init);
   if(btn){
     btn.addEventListener('click', function(){
       var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       var next = cur === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
-      applyMeta(next); applyLabel(next);
+      applyLabel(next);
     });
   }
   try{
@@ -127,7 +124,7 @@ a{color:var(--accent)}
         if(!localStorage.getItem('newsforge-theme')){
           var t = e.matches ? 'dark' : 'light';
           root.setAttribute('data-theme', t);
-          applyMeta(t); applyLabel(t);
+          applyLabel(t);
         }
       }catch(err){}
     };

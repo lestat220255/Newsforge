@@ -126,7 +126,7 @@ curl -s -o /dev/null -w "%{http_code} %{content_type}\n" <公网URL>
    ```bash
    node pipeline/run.js --upload-images --date=YYYY-MM-DD
    ```
-   → 当期新图上传 R2（key = `YYYY-MM/文件名.webp`，按月分文件夹）
+   → 当期新图上传 R2（key = `YYYY-MM/DD/文件名.webp`，按日分文件夹）
    → edition 图片字段改写为 R2 公网 URL → 自动重渲染
    → 有缺图则退出码 2，不继续发布
 3. **逐个 curl 验证**图片 URL（HTTP 200 + `Content-Type: image/webp`），失败不推送

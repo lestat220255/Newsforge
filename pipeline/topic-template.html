@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141417">
 <script>
 (function(){
   try{
@@ -12,8 +13,6 @@
       t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
-    var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -26,7 +25,7 @@
 <meta property="og:title" content="话题：{{TOPIC_NAME}} · {{SITE_NAME}}">
 <meta property="og:description" content="{{TAGLINE}}">
 <meta property="og:url" content="{{TOPIC_URL}}">
-<meta property="og:image" content="{{SITE_URL}}/favicon.png">
+<meta property="og:image" content="{{SITE_URL}}/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="{{TOPIC_URL}}">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -40,7 +39,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"
 /* 可信度徽标（2026-10-07）：待确认=单信源未证实；多信源=多家独立媒体交叉报道 */
 .badge{display:inline-block;font-size:11px;line-height:1.5;padding:0 7px;border-radius:20px;margin-left:6px;vertical-align:2px;font-weight:600;white-space:nowrap}
 .badge-pending{color:var(--muted);border:1px solid var(--border);background:var(--surface2)}
-.badge-multi{color:#2ea043;border:1px solid rgba(46,160,90,.45);background:rgba(46,160,90,.1)}
+.badge-multi{color:var(--ok);border:1px solid rgba(76,196,104,.45);background:rgba(76,196,104,.06)}
 .trust-badges{margin:6px 0 0}
 .badge-update{color:var(--accent);border:1px solid var(--accent);background:var(--accent-soft)}
 .trust-badges:empty{display:none}
@@ -74,6 +73,7 @@ ul.hl .t{font-size:16px}
 ul.hl .t a{color:var(--text);text-decoration:none}
 ul.hl .t a:hover{color:var(--accent)}
 ul.hl .sec{display:inline-block;font-size:12px;color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:0 8px;margin-right:8px;white-space:nowrap}
+.carried{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:normal;white-space:nowrap}
 ul.hl .sum{margin:4px 0 0;color:var(--muted);font-size:14px}
 footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
 footer .build{margin-top:8px;font-size:12px;color:var(--muted2)}
@@ -115,18 +115,16 @@ a{color:var(--accent)}
 (function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
-  var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
-  applyMeta(init); applyLabel(init);
+  applyLabel(init);
   if(btn){
     btn.addEventListener('click', function(){
       var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       var next = cur === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
-      applyMeta(next); applyLabel(next);
+      applyLabel(next);
     });
   }
   try{
@@ -136,7 +134,7 @@ a{color:var(--accent)}
         if(!localStorage.getItem('newsforge-theme')){
           var t = e.matches ? 'dark' : 'light';
           root.setAttribute('data-theme', t);
-          applyMeta(t); applyLabel(t);
+          applyLabel(t);
         }
       }catch(err){}
     };

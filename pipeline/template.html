@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141417">
 <script>
 /* 主题初始化：同步执行，必须在 CSS 解析前设置 data-theme，避免主题闪烁 */
 (function(){
@@ -13,8 +14,6 @@
       t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
-    var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -52,7 +51,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"
 /* 可信度徽标（2026-10-07）：待确认=单信源未证实；多信源=多家独立媒体交叉报道 */
 .badge{display:inline-block;font-size:11px;line-height:1.5;padding:0 7px;border-radius:20px;margin-left:6px;vertical-align:2px;font-weight:600;white-space:nowrap}
 .badge-pending{color:var(--muted);border:1px solid var(--border);background:var(--surface2)}
-.badge-multi{color:#2ea043;border:1px solid rgba(46,160,90,.45);background:rgba(46,160,90,.1)}
+.badge-multi{color:var(--ok);border:1px solid rgba(76,196,104,.45);background:rgba(76,196,104,.06)}
 .trust-badges{margin:6px 0 0}
 .badge-update{color:var(--accent);border:1px solid var(--accent);background:var(--accent-soft)}
 .trust-badges:empty{display:none}
@@ -215,10 +214,7 @@ ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
 
   <div class="toolbar" data-pagefind-ignore>
     <div id="search"><div class="pf-wrap"><input class="pf-placeholder" type="text" id="pf-placeholder" placeholder="搜索本站…" aria-label="搜索本站" autocomplete="off"><kbd class="pf-kbd" title="按 / 快速搜索">/</kbd></div></div>
-    <select id="archive" aria-label="往期归档">
-      <option value="">往期归档…</option>
-      {{ARCHIVE_OPTS}}
-    </select>
+    {{ARCHIVE_SELECT}}
     <a href="/archive/" class="arch-link">全部归档 →</a>
     <a href="/feed.xml" class="rss-link" title="RSS 订阅">📡 RSS</a>
   </div>
@@ -296,7 +292,9 @@ ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
 })();
 </script>
 <script>
-document.getElementById('archive').addEventListener('change', function(e){
+/* 归档下拉：首页不渲染（归档页日历已覆盖跳转），日期页才有；不存在时不绑定 */
+var archSel = document.getElementById('archive');
+if (archSel) archSel.addEventListener('change', function(e){
   if (e.target.value) location.href = e.target.value;
 });
 window.addEventListener('DOMContentLoaded', function(){
@@ -345,18 +343,16 @@ window.addEventListener('DOMContentLoaded', function(){
 (function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
-  var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
-  applyMeta(init); applyLabel(init);
+  applyLabel(init);
   if(btn){
     btn.addEventListener('click', function(){
       var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       var next = cur === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
-      applyMeta(next); applyLabel(next);
+      applyLabel(next);
     });
   }
   try{

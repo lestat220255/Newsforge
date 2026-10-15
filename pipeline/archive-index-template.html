@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0f1419" id="meta-theme-color">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f2">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141417">
 <script>
 (function(){
   try{
@@ -12,8 +13,6 @@
       t = 'dark';
     }
     document.documentElement.setAttribute('data-theme', t);
-    var mc = document.getElementById('meta-theme-color');
-    if(mc) mc.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2');
   }catch(e){}
 })();
 </script>
@@ -26,7 +25,7 @@
 <meta property="og:title" content="往期归档 · {{SITE_NAME}}">
 <meta property="og:description" content="{{TAGLINE}}">
 <meta property="og:url" content="{{SITE_URL}}/archive/">
-<meta property="og:image" content="{{SITE_URL}}/favicon.png">
+<meta property="og:image" content="{{SITE_URL}}/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="{{SITE_URL}}/archive/">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -40,7 +39,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"
 /* 可信度徽标（2026-10-07）：待确认=单信源未证实；多信源=多家独立媒体交叉报道 */
 .badge{display:inline-block;font-size:11px;line-height:1.5;padding:0 7px;border-radius:20px;margin-left:6px;vertical-align:2px;font-weight:600;white-space:nowrap}
 .badge-pending{color:var(--muted);border:1px solid var(--border);background:var(--surface2)}
-.badge-multi{color:#2ea043;border:1px solid rgba(46,160,90,.45);background:rgba(46,160,90,.1)}
+.badge-multi{color:var(--ok);border:1px solid rgba(76,196,104,.45);background:rgba(76,196,104,.06)}
 .trust-badges{margin:6px 0 0}
 .badge-update{color:var(--accent);border:1px solid var(--accent);background:var(--accent-soft)}
 .trust-badges:empty{display:none}
@@ -55,6 +54,43 @@ header.top h1 .logo{height:38px;width:38px;margin-right:12px;flex:none}
 header.top p{margin:6px 0 0;color:var(--muted);font-size:14px}
 .crumb{padding:18px 0 6px;font-size:13px;color:var(--muted)}
 .crumb a{color:var(--accent);text-decoration:none}
+/* 吸顶条 + 日历（仅归档页） */
+.sticky-bar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;margin:0 -18px;padding:10px 18px;background:var(--nav-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.sticky-bar .sb-home{color:var(--accent);text-decoration:none;font-size:14px;white-space:nowrap}
+.sticky-bar .sb-title{font-weight:bold;font-size:15px}
+.cal-btn{cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);border-radius:20px;padding:6px 14px;font-size:14px;color:var(--text);margin-left:auto;user-select:none}
+.cal-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cal-backdrop{display:none}
+.cal-month + .cal-month{margin-top:14px}
+.cal-label{font-size:14px;font-weight:bold;margin-bottom:8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal-grid .cell{display:flex;align-items:center;justify-content:center;height:32px;border-radius:8px;font-size:13px}
+.cal-grid .wd{color:var(--muted);font-size:12px;height:22px}
+.cal-grid a.cell{background:var(--surface2);color:var(--text);text-decoration:none}
+.cal-grid a.cell:hover{background:var(--accent);color:var(--on-accent)}
+.cal-grid a.cell.latest{border:1px solid var(--accent)}
+.cal-grid a.cell.selected{background:var(--accent);color:var(--on-accent)}
+.cal-grid .empty{color:var(--muted2)}
+.cal-grid .blank{background:none}
+.ed{scroll-margin-top:70px}
+/* 归档索引布局：正文 + 年份选择侧栏 */
+.arch-layout{display:grid;grid-template-columns:1fr 320px;gap:22px;align-items:start}
+.arch-side{position:sticky;top:64px}
+.year-pick{border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:14px 16px}
+.year-pick summary{cursor:pointer;list-style:none;font-weight:bold;font-size:15px}
+.year-pick summary::-webkit-details-marker{display:none}
+.year-block + .year-block{margin-top:16px}
+.year-block h3{margin:0 0 10px;font-size:15px}
+.cal-label a{color:var(--text);text-decoration:none}
+.cal-label a:hover{color:var(--accent)}
+.arch-side .cal-grid .cell{height:28px;font-size:12px}
+@media(max-width:900px){
+  .arch-layout{grid-template-columns:1fr}
+  /* 移动端：侧栏日历变底部抽屉，复用同一份 DOM，不另做日历 */
+  .arch-side{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:80;max-height:75vh;overflow-y:auto;background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);transform:translateY(105%);transition:transform .25s ease;padding:8px 16px 20px}
+  html.cal-open .arch-side{transform:translateY(0)}
+  html.cal-open .cal-backdrop{display:block;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:70}
+}
 details.month{margin:18px 0;border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden}
 details.month summary{cursor:pointer;padding:16px 22px;font-size:18px;font-weight:bold;list-style:none;display:flex;align-items:center;gap:10px}
 details.month summary::-webkit-details-marker{display:none}
@@ -74,6 +110,7 @@ ul.hl .t{font-size:16px}
 ul.hl .t a{color:var(--text);text-decoration:none}
 ul.hl .t a:hover{color:var(--accent)}
 ul.hl .sec{display:inline-block;font-size:12px;color:var(--accent);border:1px solid var(--border);border-radius:6px;padding:0 8px;margin-right:8px;white-space:nowrap}
+.carried{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:normal;white-space:nowrap}
 ul.hl .sum{margin:4px 0 0;color:var(--muted);font-size:14px}
 footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
 footer .build{margin-top:8px;font-size:12px;color:var(--muted2)}
@@ -101,10 +138,23 @@ a{color:var(--accent)}
     </div>
     <p>{{TAGLINE}}</p>
   </header>
+  <div class="sticky-bar">
+    <a class="sb-home" href="/">← 首页</a><span class="sb-title">往期归档</span>
+    <button type="button" class="cal-btn" id="cal-btn">📅 日历</button>
+  </div>
+  <div class="cal-backdrop" id="cal-backdrop"></div>
   <nav class="crumb"><a href="/">首页</a> <span>/</span> <span>往期归档</span></nav>
   <main data-pagefind-body>
     <span data-pagefind-meta="title" style="display:none">往期归档 · {{SITE_NAME}}</span>
-    {{ARCHIVE_LIST}}
+    <div class="arch-layout">
+      <div class="arch-main">{{ARCHIVE_LIST}}</div>
+      <aside class="arch-side">
+        <details class="year-pick" id="year-pick" open>
+          <summary>🗓 选择月份</summary>
+          {{YEAR_CALENDAR}}
+        </details>
+      </aside>
+    </div>
   </main>
   <footer data-pagefind-ignore>
     <strong>免责声明：</strong>{{DISCLAIMER}}
@@ -115,18 +165,16 @@ a{color:var(--accent)}
 (function(){
   var root = document.documentElement;
   var btn = document.getElementById('theme-toggle');
-  var metaTheme = document.getElementById('meta-theme-color');
-  function applyMeta(t){ if(metaTheme) metaTheme.setAttribute('content', t === 'dark' ? '#141417' : '#faf8f2'); }
   function applyLabel(t){ if(btn) btn.setAttribute('aria-label', t === 'dark' ? '切换到浅色主题' : '切换到深色主题'); }
   var init = root.getAttribute('data-theme') || 'light';
-  applyMeta(init); applyLabel(init);
+  applyLabel(init);
   if(btn){
     btn.addEventListener('click', function(){
       var cur = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
       var next = cur === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', next);
       try{ localStorage.setItem('newsforge-theme', next); }catch(e){}
-      applyMeta(next); applyLabel(next);
+      applyLabel(next);
     });
   }
   try{
@@ -136,12 +184,61 @@ a{color:var(--accent)}
         if(!localStorage.getItem('newsforge-theme')){
           var t = e.matches ? 'dark' : 'light';
           root.setAttribute('data-theme', t);
-          applyMeta(t); applyLabel(t);
+          applyLabel(t);
         }
       }catch(err){}
     };
     if(mq.addEventListener) mq.addEventListener('change', onChange);
     else if(mq.addListener) mq.addListener(onChange);
+  }catch(e){}
+  // 📅 日历按钮：桌面端滚动到侧栏日历；移动端打开底部抽屉（复用同一份侧栏 DOM）
+  try{
+    var calBtn = document.getElementById('cal-btn');
+    var side = document.querySelector('.arch-side');
+    var backdrop = document.getElementById('cal-backdrop');
+    var rootEl = document.documentElement;
+    function closeCal(){
+      rootEl.classList.remove('cal-open');
+      rootEl.style.overflow = '';
+    }
+    function openCal(){
+      var yp = document.getElementById('year-pick');
+      if(yp) yp.setAttribute('open', '');
+      if(window.matchMedia('(max-width: 900px)').matches){
+        rootEl.classList.add('cal-open');
+        rootEl.style.overflow = 'hidden';
+      }else if(side){
+        try{ side.scrollIntoView({behavior:'smooth', block:'start'}); }
+        catch(e){ side.scrollIntoView(); }
+      }
+    }
+    if(calBtn){
+      calBtn.addEventListener('click', function(){
+        if(rootEl.classList.contains('cal-open')) closeCal(); else openCal();
+      });
+    }
+    if(backdrop) backdrop.addEventListener('click', closeCal);
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeCal(); });
+    // 点侧栏日期后关闭抽屉（移动端）；桌面端无抽屉，closeCal 是空操作
+    if(side){
+      side.addEventListener('click', function(e){
+        var a = e.target.closest ? e.target.closest('a') : null;
+        if(a) closeCal();
+      });
+    }
+  }catch(e){}
+  // 日历选中高亮：按 URL 锚点（#d-YYYY-MM-DD）标出当前选中的日期；latest 的边框是“最新”标记，两者可共存
+  try{
+    function syncCalSelected(){
+      var m = (location.hash || '').match(/^#d-(\d{4}-\d{2}-\d{2})$/);
+      var prev = document.querySelectorAll('.cal-grid a.cell.selected');
+      for(var i = 0; i < prev.length; i++) prev[i].classList.remove('selected');
+      if(!m) return;
+      var cur = document.querySelectorAll('.cal-grid a.cell[href$="#d-' + m[1] + '"]');
+      for(var j = 0; j < cur.length; j++) cur[j].classList.add('selected');
+    }
+    syncCalSelected();
+    window.addEventListener('hashchange', syncCalSelected);
   }catch(e){}
 })();
 </script>
