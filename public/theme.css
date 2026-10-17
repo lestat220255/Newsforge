@@ -27,7 +27,7 @@
   --ext-text-hover:#e8bc4f;
   --ext-bg:rgba(232,163,61,.07);
   --ext-bg-hover:rgba(232,163,61,.14);
-  --nav-bg:rgba(20,20,23,.88);
+  --nav-bg:rgba(20,20,23,.80);
   --comment-bg:rgba(232,163,61,.08);
   --comment-border:#e8a33d;
   --banner-bg:linear-gradient(135deg,#221c10,#28282e);
@@ -66,7 +66,7 @@
   --ext-text-hover:#7a6114;
   --ext-bg:rgba(201,162,39,.08);
   --ext-bg-hover:rgba(201,162,39,.16);
-  --nav-bg:rgba(250,248,242,.88);
+  --nav-bg:rgba(250,248,242,.80);
   --comment-bg:rgba(181,122,30,.06);
   --comment-border:#b57a1e;
   --banner-bg:linear-gradient(90deg,#fdf9f1,#eee2c9);

@@ -101,20 +101,22 @@ function renderSection(sec, date) {
 function renderDigest(edition) {
   const d = edition.dailyDigest;
   if (!d) return '';
-  const picks = (d.topPicks || [])
+  const entries = (d.topPicks || [])
     .map((p) => {
       const sec = edition.sections.find((s) => s.id === p.section);
       // 沿用板块一律不进入"今日最值得看"（2026-10-10）：模板层硬过滤，防 edition 手误写入
-      if (!sec || sec.hidden || sec.empty || sec.carried) return '';
+      if (!sec || sec.hidden || sec.empty || sec.carried) return null;
       const entry = p.index === 0 ? sec.headline : (sec.items || [])[p.index - 1];
-      if (!entry) return '';
-      const dDate = sec.detailDate || edition.date;
-      return `<li${entry.sensitive ? ' data-sensitive="1"' : ''}><span class="sec-tag">${esc(sec.name)}</span><a href="${detailUrl(dDate, sec.id, p.index)}">${esc(entry.title)}</a></li>`;
+      if (!entry) return null;
+      return { sec, entry, dDate: sec.detailDate || edition.date, sensitive: !!entry.sensitive, index: p.index };
     })
-    .filter(Boolean)
+    .filter(Boolean);
+  // 编号按过滤后的可见顺序编（2026-10-17，A 编号排版），筛选逻辑不变
+  const picks = entries
+    .map(({ sec, entry, dDate, sensitive, index }, i) => `<li${sensitive ? ' data-sensitive="1"' : ''}><span class="pick-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="pick-body"><span class="sec-tag">${esc(sec.name)}</span><a href="${detailUrl(dDate, sec.id, index)}">${esc(entry.title)}</a></span></li>`)
     .join('');
   return `<div class="digest" data-pagefind-ignore>
-    <div class="digest-top"><span class="digest-issue"><strong>第 ${d.issue} 期</strong>${esc(d.dateLabel)}</span><span class="digest-stats">${d.stats.items} 条更新 · ${d.stats.sources} 个来源 · 约 ${d.stats.readMinutes} 分钟读完</span></div>
+    <div class="digest-top"><span class="digest-issue"><strong>第 ${d.issue} 期</strong><span class="digest-date">${esc(d.dateLabel)}</span></span><span class="digest-stats"><span class="stat"><span class="stat-num">${d.stats.items}</span><span class="stat-label">条更新</span></span><span class="stat"><span class="stat-num">${d.stats.sources}</span><span class="stat-label">个来源</span></span><span class="stat"><span class="stat-num">约 ${d.stats.readMinutes}</span><span class="stat-label">分钟读完</span></span></span></div>
     ${d.oneLiner ? `<p class="digest-oneliner">${esc(d.oneLiner)}</p>` : ''}
     ${picks ? `<div class="digest-picks"><div class="digest-picks-title">今日最值得看</div><ul>${picks}</ul></div>` : ''}
   </div>`;
@@ -143,7 +145,9 @@ function renderPage(tpl, edition, dates, canonical, showTgBanner) {
       })
       .join('');
   })();
-  const navLinks = visibleSections.map((s) => `<a href="#${esc(s.id)}">${esc(s.name)}</a>`).join('');
+  const navPills = visibleSections.map((s) => `<a href="#${esc(s.id)}">${esc(s.name)}</a>`).join('');
+  // 全部板块下拉（2026-10-17）：pill 保持横向滚动；按钮固定在导航栏右端不随滚动；面板列出全部板块（与 pill 同链接）
+  const navLinks = `<div class="nav-scroll">${navPills}</div><button class="nav-all-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="nav-all-panel">全部板块 <span class="nav-all-arrow" aria-hidden="true">▾</span></button><div class="nav-all-panel" id="nav-all-panel" hidden>${navPills}</div>`;
   // 首页去掉归档下拉（归档页日历已覆盖跳转）；每日期页保留（该页无日历，是唯一跳日期入口）
   const isHome = canonical === SITE.url + '/';
   const archiveSelect = isHome
