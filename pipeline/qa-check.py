@@ -150,7 +150,7 @@ for sec in ed['sections']:
             ok(f'{sid} {label} keyFacts 合规')
 ok(f'{date} 结构与字数检查完成')
 
-# 26. dailyDigest（2026-10-09 起）：topPicks 只指向 hot 头条、≤配置条数；oneLiner ≤40 字
+# 26. dailyDigest（2026-10-09 起）：topPicks 只指向 hot 头条、≤配置条数（oneLiner 已于 2026-10-17 随 A 合并移除，不再校验）
 dd = ed.get('dailyDigest')
 if dd is not None:
     max_picks = 3
@@ -176,10 +176,6 @@ if dd is not None:
             fail(f'{date} dailyDigest topPicks 非 hot 头条', ','.join(bad))
         else:
             ok(f'{date} dailyDigest topPicks 合规')
-    if len(str(dd.get('oneLiner', ''))) > 40:
-        fail(f'{date} dailyDigest oneLiner 超 40 字', str(dd.get('oneLiner'))[:44])
-    else:
-        ok(f'{date} dailyDigest oneLiner 合规')
 
 # ---------- 4. 图片对应（按图判断，b64/R2 混存的过渡期也能处理） ----------
 # https 绝对 URL（R2）：必须在 data/image-dims.json 边车有记录（= 已上传；推送前另做逐个 curl 实测）

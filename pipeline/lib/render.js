@@ -101,6 +101,10 @@ function renderSection(sec, date) {
 function renderDigest(edition) {
   const d = edition.dailyDigest;
   if (!d) return '';
+  // 热点数由代码数（2026-10-17，A 合并）：只数非沿用、非隐藏、非空板块的头条 + 次条里 hot:true 的条数，与 topPicks 排除沿用口径一致
+  const hotCount = (edition.sections || [])
+    .filter((s) => !s.hidden && !s.empty && !s.carried)
+    .reduce((n, s) => n + (s.headline && s.headline.hot ? 1 : 0) + (s.items || []).filter((it) => it.hot).length, 0);
   const entries = (d.topPicks || [])
     .map((p) => {
       const sec = edition.sections.find((s) => s.id === p.section);
@@ -116,8 +120,7 @@ function renderDigest(edition) {
     .map(({ sec, entry, dDate, sensitive, index }, i) => `<li${sensitive ? ' data-sensitive="1"' : ''}><span class="pick-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="pick-body"><span class="sec-tag">${esc(sec.name)}</span><a href="${detailUrl(dDate, sec.id, index)}">${esc(entry.title)}</a></span></li>`)
     .join('');
   return `<div class="digest" data-pagefind-ignore>
-    <div class="digest-top"><span class="digest-issue"><strong>第 ${d.issue} 期</strong><span class="digest-date">${esc(d.dateLabel)}</span></span><span class="digest-stats"><span class="stat"><span class="stat-num">${d.stats.items}</span><span class="stat-label">条更新</span></span><span class="stat"><span class="stat-num">${d.stats.sources}</span><span class="stat-label">个来源</span></span><span class="stat"><span class="stat-num">约 ${d.stats.readMinutes}</span><span class="stat-label">分钟读完</span></span></span></div>
-    ${d.oneLiner ? `<p class="digest-oneliner">${esc(d.oneLiner)}</p>` : ''}
+    <div class="digest-top"><span class="digest-issue"><strong>第 ${d.issue} 期</strong><span class="digest-date">${esc(d.dateLabel)}</span></span><span class="digest-stats"><span class="stat"><span class="stat-num">${d.stats.items}</span><span class="stat-label">条更新</span></span><span class="stat"><span class="stat-num">${d.stats.sources}</span><span class="stat-label">个来源</span></span><span class="stat"><span class="stat-num">${hotCount}</span><span class="stat-label">条热点</span></span><span class="stat"><span class="stat-num">约 ${d.stats.readMinutes}</span><span class="stat-label">分钟读完</span></span></span></div>
     ${picks ? `<div class="digest-picks"><div class="digest-picks-title">今日最值得看</div><ul>${picks}</ul></div>` : ''}
   </div>`;
 }
