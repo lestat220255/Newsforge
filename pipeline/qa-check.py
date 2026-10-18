@@ -98,6 +98,9 @@ HL_REQ = ['title', 'summary', 'comment', 'analysis', 'url', 'publishedAt', 'sour
 IT_REQ = ['title', 'blurb', 'summary', 'analysis', 'url', 'publishedAt', 'source']
 for sec in ed['sections']:
     sid = sec['id']
+    # 板块名必填（2026-10-18 空白事故：edition 漏写 name 会导致导航/标题/面板全空白上线；QA 直接拦截）
+    if not sec.get('name'):
+        fail(f'{sid} 板块缺 name', '')
     if sec.get('hidden'):
         if sec.get('headline') or sec.get('items'):
             fail(f'{sid} hidden 板块仍有内容', '')

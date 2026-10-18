@@ -2,7 +2,7 @@
 // 依赖 utils / fetchers；被 render / run 调用。
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SITE, FEATURES, EDITORIAL } from '../site-config.js';
+import { SITE, FEATURES, EDITORIAL, SECTIONS } from '../site-config.js';
 import { principlesPrompt } from './principles.js';
 import { EDITIONS_DIR, parseTime, isFresh } from './utils.js';
 import { collectSection } from './fetchers.js';
@@ -137,6 +137,12 @@ function loadEdition(date) {
     const ed = JSON.parse(readFileSync(join(EDITIONS_DIR, `${date}.json`), 'utf8'));
     // 次条按发布时间倒序（新的在前），保证全站排序一致
     for (const sec of ed.sections || []) {
+      // 兜底（2026-10-18 板块名空白事故）：edition 缺 name/desc 时用模块定义补，防止板块名空白上线
+      const cfg = SECTIONS.find((c) => c.id === sec.id);
+      if (cfg) {
+        if (!sec.name) sec.name = cfg.name;
+        if (!sec.desc) sec.desc = cfg.desc;
+      }
       if (sec.items) sec.items.sort((a, b) => ((a.unverified ? 1 : 0) - (b.unverified ? 1 : 0)) || ((parseTime(b.publishedAt) || 0) - (parseTime(a.publishedAt) || 0)));
     }
     return ed;

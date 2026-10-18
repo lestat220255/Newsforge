@@ -115,3 +115,4 @@ logo/favicon 换 `public/` 下的对应文件即可。深色模式模板已内�
 - 线上没更新：查 Pages 的构建日志，确认 main 分支推送成功
 - 图片裂了：b64 模式检查对应的 `.webp.b64` 是否推送到仓库（构建环境只有 b64，没有本地二进制）；R2 模式直接 curl 图片 URL 看 HTTP 状态和 Content-Type
 - 排序错乱：检查时间字符串是否带时区，统一走 `parseTime()` 按用户时区解析
+- 板块名空白：edition 的 section 缺 `name`/`desc`（渲染会用 `module.json` 兜底补齐，QA 缺 `name` 直接 FAIL；手工编辑 edition 时必须保留三字段）
