@@ -43,6 +43,13 @@
 
 **B. 手动确认**：每日构建 → 汇报摘要问"推送吗" → 用户确认后推送。PAT 没配好时自动降级到这个模式（走默认授权，每次推送用户点一次审批）。
 
+## GitHub Actions 模式的推送（不走本文件）
+
+每日运行若选了 GitHub Actions 宿主（见 `docs/ACTIONS.md`），提交由
+workflow 用内置 `GITHUB_TOKEN` 完成：QA 通过后自动 commit + push，
+不需要 PAT、也不走 GitHub App 审批。本文件（PAT vs 默认授权）
+只管 Muse 宿主模式。同一仓库不要同时启用两种模式的自动推送。
+
 ## Agent 守则
 
 - 默认按 A 模式建定时任务；用户明确说"每次我要确认"才用 B。

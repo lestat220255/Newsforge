@@ -6,7 +6,7 @@
 
 - **模式 A（Muse，零 API 成本）**：宿主提供对话、定时任务与推送通道，按 playbook + `crons/` 模板执行。
 - **模式 B（终端 agent CLI，BYOK）**：用户在仓库根目录打开 Claude Code / Codex / Gemini CLI（API key 或订阅登录），粘贴 playbook 第 1 节的启动指令，执行同一份契约。各家 CLI 的装法、登录与审批注意事项在 `docs/agents/` 下，一家一份。
-- 成本口径（对用户如实说）：初始化是一次性会话，token 量很小；持续 API 成本只在每日运行走 LLM API 路径（README「两条运行路径」的路径 B）时才产生。终端 CLI 不能常驻，模式 B 下每日自动运行需要常驻宿主或后续托管方案，初始化时按 playbook 的 Q9-2 如实向用户说明，不许假装建好定时任务。
+- 成本口径（对用户如实说）：初始化是一次性会话，token 量很小；持续 API 成本只在每日运行走 API 路径（README「两条运行路径」的路径 B）时才产生。每日运行的宿主有两种：Muse 定时任务（`crons/` 模板，见第 3 节）或 GitHub Actions（`.github/workflows/daily.yml`，agent CLI + API key，启用指南见 `docs/ACTIONS.md`）——二选一，不要在同一仓库同时开。初始化时按 playbook 向用户确认选哪种宿主，不许在没落实宿主时假装建好定时任务。
 
 ## 1. 仓库结构
 
@@ -16,9 +16,11 @@ newsforge/
   site.json.example    # 配置模板
   pipeline/            # 抓取 + 构建管线
   modules/<id>/        # 模块目录，每个模块一个 module.json
-  docs/                # 本手册 + 安装入口（ONBOARDING.md）+ 信源推荐 + 抓取策略 + agents/（各家 CLI 适配）
-  playbooks/           # 初始化契约（onboarding.md，宿主无关，唯一真相）
-  crons/               # 定时任务 prompt 模板
+  docs/                # 本手册 + 安装入口（ONBOARDING.md）+ 信源推荐 + 抓取策略 + agents/（各家 CLI 适配）+ ACTIONS.md（Actions 日更指南）
+  playbooks/           # 宿主无关契约（onboarding.md 初始化、daily.md 每日运行，唯一真相）
+  scripts/             # run-agent 执行器（Actions/本地跑 playbook）+ 契约测试
+  .github/workflows/   # Actions 日更 workflow（BYOK 模式，变量守卫默认惰性）
+  crons/               # 定时任务 prompt 模板（Muse 宿主模式）
   public/              # 构建输出（Cloudflare Pages 发布目录）
   data/editions/       # 每日 edition JSON（构建产物进 git，用于归档页）
 ```
@@ -31,6 +33,10 @@ newsforge/
 - 环境变量：无（零 API 成本，不需要任何 key）
 
 ## 3. 每日流程
+
+> 本节是 **Muse 宿主模式**的每日流程。Actions 宿主模式执行的是同一套
+> 流程（同一份 `playbooks/daily.md` 契约），由 `.github/workflows/daily.yml`
+> 一气跑完「抓取 → 编辑 → QA → 提交 → 推送」，启用与排查见 `docs/ACTIONS.md`。
 
 1. **构建任务**（用户起床前 1.5h）：`node pipeline/run.js` → 抓取 → AI 编辑 → 生成 `data/editions/YYYY-MM-DD.json` → 本地渲染到 `public/`。**只构建，不推送。**
 2. **推送确认**（用户起床时间）：向用户汇报今日摘要（各模块新内容数、头条标题），问"推送吗"。

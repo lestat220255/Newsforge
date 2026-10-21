@@ -123,8 +123,8 @@ AI 会在对话里帮你建 3 个定时任务（模板在 `crons/` 里）：
 
 - `pipeline/` — 抓取 + 构建管线：`run.js` 只做调度，`lib/` 下分模块（`utils` 基础工具 / `fetchers` 信源抓取 / `edit` LLM 编辑 / `images` 图片管线 / `render` 静态渲染 / `r2-images` R2 图片上传）
 - `modules/cyber/` — 一个示例模块，照着它就能写自己的模块
-- `playbooks/` — 初始化契约（`onboarding.md`：问题集、产出物、完成判据的唯一真相，任何 AI 宿主都按它执行）
-- `docs/` — 写给 AI 助手看的手册（`ONBOARDING.md` 是模式选择入口，`agents/` 是各家终端 CLI 的适配说明，`R2-IMAGES.md` 是图片存 R2 的完整指南）
+- `playbooks/` — 宿主无关契约（`onboarding.md` 初始化、`daily.md` 每日运行：问题集、步骤、产出物、完成判据的唯一真相，任何 AI 宿主都按它执行）
+- `docs/` — 写给 AI 助手看的手册（`ONBOARDING.md` 是模式选择入口，`agents/` 是各家终端 CLI 的适配说明，`ACTIONS.md` 是 GitHub Actions 日更启用指南，`R2-IMAGES.md` 是图片存 R2 的完整指南）
 - `crons/` — 定时任务模板：每日构建、推送确认、信源健康检查
 
 ## 两条运行路径（先看懂这个）
@@ -134,12 +134,19 @@ AI 会在对话里帮你建 3 个定时任务（模板在 `crons/` 里）：
 编辑（选头条、写摘要点评）由你的 AI 助手按 `docs/SCRAPING.md` 和各模块 `editorial` 口径手工完成，
 最后 `npm run render` 生成静态页面。这是模板设计的默认路径，不调用任何付费 API。
 
-**路径 B：LLM API 自动编辑（备用）。**
-设置 `LLM_API_KEY`（及可选 `LLM_BASE_URL` / `LLM_MODEL`，默认兼容 DeepSeek 接口）后，
-`npm run build` 会走"抓取 → LLM 自动编辑 → 渲染"全自动流程，适合 GitHub Actions 无人值守运行。
-这条路径要花你自己的 API 费用，默认关闭；`--skip-llm` 可强制跳过。
-GitHub Actions 示例见 `.github/workflows/daily.yml`：在仓库 Settings → Secrets 里配好 `LLM_API_KEY` 和 `R2_*` 即可用，
-步骤顺序已锁死（抓取→LLM编辑→R2上传→提交 edition→Pages 自动构建），R2 上传带写后校验，失败会标红不提交半成品。
+**路径 B：GitHub Actions + agent CLI 自动编辑（BYOK）。**
+不想让任何一台机器常驻时用这个：GitHub Actions 每天定时唤醒一个 agent CLI
+（Claude Code / Codex / Gemini CLI 之一），拿你自己的 API key，按与路径 A
+同一份每日契约（`playbooks/daily.md`）完成编辑，`npm test` QA 过了才提交、
+Cloudflare Pages 自动上线。启用步骤、vars/secrets 清单、成本量级与
+GitHub 定时抖动的如实披露都在 `docs/ACTIONS.md`。
+这条路径花你自己的 API 费用（或 Codex 的 ChatGPT 订阅额度），默认关闭：
+workflow 被仓库变量守卫，没显式启用就永远跳过，模板仓库自身不会空跑。
+
+> 代码里还留着一条更老的直连备用模式：给 `npm run build` 设置 `LLM_API_KEY`
+>（及可选 `LLM_BASE_URL` / `LLM_MODEL`，默认兼容 DeepSeek 接口）后 run.js
+> 会自己调 LLM API 编辑。它绕过了 agent 与 playbook 契约，只作备用保留，
+> 新部署请用上面的 Actions 路径。
 
 ## 内容来源与署名
 

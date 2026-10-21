@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""run-agent 离线测试桩：冒充 gemini CLI（headless）。
+
+run-agent 给 gemini 的调用形状：`gemini -p <短指令> --output-format
+json -y [-m MODEL]`，playbook 全文从 stdin 传入（gemini 会把 stdin
+追加到 -p 提示之后）。
+行为由 FAKE_GEMINI_MODE 选择：
+  ok    - 打印 {"response": ...} JSON 信封（带 RUN-SUMMARY），退出 0
+  error - 打印 {"error": {...}} 信封，退出 1
+  fail  - stderr 打一行致命错误，退出 3
+记录接缝（设了才写）：FAKE_GEMINI_ARGV_FILE / FAKE_GEMINI_STDIN_FILE /
+FAKE_GEMINI_COUNT_FILE。
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def record(name, text):
+    path = os.environ.get(f"FAKE_GEMINI_{name}_FILE")
+    if path:
+        Path(path).write_text(text, encoding="utf-8")
+
+
+def main():
+    stdin_text = sys.stdin.read()
+    record("ARGV", "\n".join(sys.argv[1:]))
+    record("STDIN", stdin_text)
+    count_file = os.environ.get("FAKE_GEMINI_COUNT_FILE")
+    if count_file:
+        path = Path(count_file)
+        path.write_text(str(int(path.read_text() or 0) + 1) if path.exists() else "1")
+    mode = os.environ.get("FAKE_GEMINI_MODE", "ok")
+    if mode == "fail":
+        print("fake-gemini fatal: network unreachable", file=sys.stderr)
+        return 3
+    if mode == "error":
+        print(json.dumps({"error": {"message": "stub quota exhausted", "code": 429}}))
+        return 1
+    print(json.dumps({"response": "完成\nRUN-SUMMARY: fake-gemini 1 新 0 沿用",
+                      "stats": {"models": {}}}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

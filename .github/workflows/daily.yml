@@ -1,93 +1,206 @@
-# 每日构建（路径 B：GitHub Actions 无人值守 + LLM API + R2）
+# 每日日更（BYOK 模式：GitHub Actions + agent CLI + 你自己的 API key）
 #
 # 工作原理（步骤顺序不能乱）：
-#   1. 抓取信源 → LLM 自动编辑 → 本地生成图片 + edition JSON
-#   2. 图片上传 R2（含写后校验：逐张 GET 公网 URL，要求 200 + image/*）
-#   3. 提交 edition 数据回仓库 → Cloudflare Pages 监听到 push 自动构建上线
+#   确定性抓取 → run-agent 按 playbooks/daily.md 做 AI 编辑 → 构建渲染
+#   → npm test QA 把关 → 提交 edition 回仓库 → Cloudflare Pages 自动上线
+#   → Telegram 推送（失败只警告）。QA 不过就没有提交，没有例外。
 #
-# 需要的 Secrets（仓库 Settings → Secrets and variables → Actions → New repository secret）：
-#   LLM_API_KEY         必填：LLM 接口 key（默认兼容 DeepSeek 接口）
-#   LLM_BASE_URL        可选：默认 https://api.deepseek.com
-#   LLM_MODEL           可选：默认 deepseek-chat
-#   R2_ENDPOINT         必填（R2 模式）：https://<account-id>.r2.cloudflarestorage.com
-#   R2_BUCKET           必填：bucket 名
-#   R2_PUBLIC_BASE_URL  必填：公网图片域名 https://img.example.com
-#   R2_ACCESS_KEY_ID    必填
-#   R2_SECRET_ACCESS_KEY 必填
+# 模板仓库自身惰性：job 被 vars.NEWSFORGE_DAILY_ENABLED 守卫，
+# 不设为 'true' 时所有触发都跳过（显示为 skipped，不是报错）。
+# 启用步骤、vars/secrets 清单、成本与定时抖动披露都在 docs/ACTIONS.md，
+# 本文件里引用的每一个 vars/secrets 名称都必须能在那份清单里找到（有契约测试把关）。
 #
-# R2 备选：不设 R2_* secrets 也行——--upload-images 会报未启用而失败。
-#   此时删掉 .gitignore 里 `public/images/*.webp.b64` 那行，图片走 b64 进 git，
-#   并给"上传图片到 R2"这一步加 `continue-on-error: true`。
-#
-# 没配 LLM_API_KEY 时的表现：job 照常跑完、第一步直接绿灯跳过（不是报错），
-# 配好 secret 后下一次定时/手动触发自动生效。不再出现 "No jobs were run" 红叉。
+# Muse 模式（零 API 成本）不走本 workflow，见 docs/SETUP.md 与 crons/。
 
-name: 每日构建
+name: daily（Actions 日更）
 
 on:
   schedule:
-    # 每天 21:30 UTC = 北京时间次日 05:30。按自己时区改（cron 只能用 UTC）。
-    - cron: '30 21 * * *'
-  workflow_dispatch: # 允许手动点 Run workflow 立刻跑一次
+    # 21:30 UTC = 北京时间次日 05:30（构建在站长起床前 1.5 小时的惯例）。
+    # cron 只能写 UTC；站点时区不是 UTC+8 时按期望更新时间自行换算。
+    # 注意：GitHub 的 schedule 有小时级抖动，见 docs/ACTIONS.md 的披露与缓解。
+    - cron: "30 21 * * *"
+  workflow_dispatch: # 手动点 Run workflow 立刻跑一次（首次启用先用它试跑）
+  repository_dispatch: # 外部准点触发口：POST /repos/:owner/:repo/dispatches，event_type=newsforge-daily
+    types: [newsforge-daily]
+
+concurrency:
+  group: newsforge-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write # 只用来把 edition 数据提交回本仓库
 
 jobs:
-  build:
+  daily:
+    if: ${{ vars.NEWSFORGE_DAILY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # 需要 push edition 数据回仓库
+    timeout-minutes: 120
+    env:
+      NEWSFORGE_AGENT_BACKEND: ${{ vars.NEWSFORGE_AGENT_BACKEND || 'codex' }}
+      NEWSFORGE_CODEX_AUTH: ${{ vars.NEWSFORGE_CODEX_AUTH || 'apikey' }}
     steps:
-      - name: 检查 Secrets（未配置则绿灯跳过）
-        id: gate
-        run: |
-          if [ -z "${{ secrets.LLM_API_KEY }}" ]; then
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::未配置 LLM_API_KEY，跳过本次构建（模板默认行为，不是错误）"
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v4
-        if: steps.gate.outputs.enabled == 'true'
 
       - uses: actions/setup-node@v4
-        if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 20
           cache: npm
 
-      - run: npm ci
-        if: steps.gate.outputs.enabled == 'true'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: 抓取 + LLM 编辑 + 本地图片
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
-        run: node pipeline/run.js
-        # 日期按 site.json 的 timezone 自动算，不用传 --date
+      - name: 安装依赖
+        run: npm ci
 
-      - name: 上传图片到 R2（含写后校验）
-        if: steps.gate.outputs.enabled == 'true'
+      - name: 安装所选 Agent CLI
+        run: |
+          case "$NEWSFORGE_AGENT_BACKEND" in
+            claude) npm install -g @anthropic-ai/claude-code ;;
+            codex)  npm install -g @openai/codex ;;
+            gemini) npm install -g @google/gemini-cli ;;
+            *) echo "::error::未知 NEWSFORGE_AGENT_BACKEND=$NEWSFORGE_AGENT_BACKEND（可选 claude/codex/gemini）"; exit 1 ;;
+          esac
+
+      - name: 放行 Codex 沙箱（Ubuntu 24.04 AppArmor）
+        if: env.NEWSFORGE_AGENT_BACKEND == 'codex'
+        # Ubuntu 24.04 runner 默认限制非特权 user namespace，Codex 的
+        # bubblewrap 沙箱会报 loopback RTM_NEWADDR 而一条命令都跑不了
+        # （jobmatch 2026-10-20 实测）。只在 runner 这台一次性 VM 上放行。
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: 物化 Codex 订阅登录（chatgpt 模式）
+        if: env.NEWSFORGE_AGENT_BACKEND == 'codex' && env.NEWSFORGE_CODEX_AUTH == 'chatgpt'
         env:
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          R2_PUBLIC_BASE_URL: ${{ secrets.R2_PUBLIC_BASE_URL }}
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+        run: |
+          test -n "$CODEX_AUTH_JSON" || { echo "::error::CODEX_AUTH_JSON secret 未设置（codex 订阅模式必填）"; exit 1; }
+          mkdir -p ~/.codex
+          printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json
+          chmod 600 ~/.codex/auth.json
+
+      - name: 配置校验（缺什么当场喊）
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+          NEWSFORGE_R2_ENABLED: ${{ vars.NEWSFORGE_R2_ENABLED }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        run: node pipeline/run.js --upload-images
-        # 校验失败（缺图/公网不可访问）退出码非 0，job 标红，不会提交半成品
+        run: |
+          if [ ! -f site.json ]; then
+            echo "::error::site.json 不在仓库里。Actions 模式要求 site.json 已提交（模板默认把它 gitignore 掉）：在本地执行 git add -f site.json 并推送，见 docs/ACTIONS.md"
+            exit 1
+          fi
+          if [ "$NEWSFORGE_R2_ENABLED" = "true" ]; then
+            for v in R2_ENDPOINT R2_BUCKET R2_PUBLIC_BASE_URL R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
+              if [ -z "${!v}" ]; then
+                echo "::error::NEWSFORGE_R2_ENABLED=true 但 $v 为空（R2 配置不全，见 docs/ACTIONS.md 清单）"
+                exit 1
+              fi
+            done
+          fi
+          case "$NEWSFORGE_AGENT_BACKEND" in
+            claude)
+              test -n "$ANTHROPIC_API_KEY" || { echo "::error::后端是 claude 但 ANTHROPIC_API_KEY secret 未设置"; exit 1; } ;;
+            codex)
+              if [ "$NEWSFORGE_CODEX_AUTH" = "chatgpt" ]; then
+                test -n "$CODEX_AUTH_JSON" || { echo "::error::codex 订阅模式需要 CODEX_AUTH_JSON secret"; exit 1; }
+              else
+                test -n "$OPENAI_API_KEY" || { echo "::error::后端是 codex 但 OPENAI_API_KEY secret 未设置"; exit 1; }
+              fi ;;
+            gemini)
+              test -n "$GEMINI_API_KEY" || { echo "::error::GEMINI_API_KEY secret 未设置"; exit 1; } ;;
+            *)
+              echo "::error::未知 NEWSFORGE_AGENT_BACKEND=$NEWSFORGE_AGENT_BACKEND"; exit 1 ;;
+          esac
+          echo "配置校验通过：backend=$NEWSFORGE_AGENT_BACKEND auth=$NEWSFORGE_CODEX_AUTH"
 
-      - name: QA 检查
-        if: steps.gate.outputs.enabled == 'true'
+      - name: 计算今日日期（站点时区）
+        run: |
+          TODAY=$(python3 - <<'PYEOF'
+          import json
+          from datetime import datetime, timedelta, timezone
+          try:
+              from zoneinfo import ZoneInfo
+              tz_name = json.load(open("site.json"))["site"].get("timezone") or "Asia/Shanghai"
+              tz = ZoneInfo(tz_name)
+          except Exception:
+              tz = timezone(timedelta(hours=8))
+          print(datetime.now(tz).strftime("%Y-%m-%d"))
+          PYEOF
+          )
+          echo "TODAY=$TODAY" >> "$GITHUB_ENV"
+          echo "今日日期（站点时区）：$TODAY"
+
+      - name: 确定性抓取
+        run: node pipeline/run.js --fetch-only --date="$TODAY"
+
+      - name: Agent 编辑（playbooks/daily.md）
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NEWSFORGE_CLAUDE_MODEL: ${{ vars.NEWSFORGE_CLAUDE_MODEL }}
+          NEWSFORGE_CODEX_MODEL: ${{ vars.NEWSFORGE_CODEX_MODEL }}
+          NEWSFORGE_GEMINI_MODEL: ${{ vars.NEWSFORGE_GEMINI_MODEL }}
+          NEWSFORGE_AGENT_TIMEOUT: ${{ vars.NEWSFORGE_AGENT_TIMEOUT }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p logs
+          python3 scripts/run-agent --playbook playbooks/daily.md \
+            --input site.json --backend "$NEWSFORGE_AGENT_BACKEND" \
+            --date "$TODAY" --log "logs/agent-$TODAY.log"
+
+      - name: 构建渲染
+        # 环境里没有 LLM_API_KEY，run.js 只渲染已有 edition，不会二次编辑
+        run: node pipeline/run.js --date="$TODAY"
+
+      - name: QA 把关（不过不提交）
         run: npm test
 
-      - name: 提交 edition 数据
-        if: steps.gate.outputs.enabled == 'true'
+      - name: 提交并推送今日 edition
         run: |
-          git config user.name "newsforge-bot"
-          git config user.email "newsforge-bot@users.noreply.github.com"
-          git add data/editions/ data/image-dims.json
-          git diff --cached --quiet || git commit -m "daily: $(date -u +%F)"
-          git push
-      # push 后 Cloudflare Pages 自动构建（构建命令只渲染不抓取，见 README）
+          git config user.name "newsforge-actions"
+          git config user.email "actions@localhost"
+          mkdir -p public/images # 全新仓库/R2 模式下该目录可能不存在，git add 会因 pathspec 不匹配报错
+          git add data public/images
+          if git diff --cached --quiet; then
+            echo "::error::agent 跑完但没有任何可提交变更——多半是编辑没产出，去看本次运行的 agent 日志 artifact"
+            exit 1
+          fi
+          git commit -m "daily: $TODAY edition（GitHub Actions 自动日更）"
+          git push origin "HEAD:${{ github.ref_name }}"
+      # push 后 Cloudflare Pages 监听到变更自动构建上线（同 Muse 模式）
+
+      - name: Telegram 推送（失败只警告，不回滚）
+        env:
+          NEWSFORGE_TELEGRAM_BOT_TOKEN: ${{ secrets.NEWSFORGE_TELEGRAM_BOT_TOKEN }}
+        run: |
+          if [ -z "$NEWSFORGE_TELEGRAM_BOT_TOKEN" ]; then
+            echo "未配置 NEWSFORGE_TELEGRAM_BOT_TOKEN，跳过 Telegram 推送"
+            exit 0
+          fi
+          mkdir -p ~/.config/newsforge
+          printf '%s' "$NEWSFORGE_TELEGRAM_BOT_TOKEN" > ~/.config/newsforge/telegram-token
+          chmod 600 ~/.config/newsforge/telegram-token
+          python3 pipeline/push-telegram.py "$TODAY" \
+            || echo "::warning::Telegram 推送失败（edition 已上线，不回滚）；看本步输出定位，一般是 token 或频道管理员权限问题"
+
+      - name: 上传失败日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-logs
+          path: logs/
+          if-no-files-found: ignore
+          retention-days: 14

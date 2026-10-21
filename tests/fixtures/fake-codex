@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""run-agent 离线测试桩：冒充 codex CLI。
+
+run-agent 给 codex 的调用形状：
+  `codex login --with-api-key`（key 从 stdin 读）
+  `codex exec - -s workspace-write -C DIR --skip-git-repo-check
+   --ephemeral --json [-m MODEL]`（prompt 从 stdin 读）
+行为由 FAKE_CODEX_MODE 选择：
+  ok       - 打印 item.completed（agent_message 带 RUN-SUMMARY）与
+             turn.completed 的 JSONL 事件流，退出 0
+  turnfail - 打印 turn.failed 事件，退出 1
+  fail     - stderr 打一行致命错误，退出 3
+记录接缝（设了才写）：FAKE_CODEX_ARGV_FILE / FAKE_CODEX_STDIN_FILE /
+FAKE_CODEX_LOGIN_FILE（login 时 stdin 收到的 key）/ FAKE_CODEX_COUNT_FILE。
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def record(name, text):
+    path = os.environ.get(f"FAKE_CODEX_{name}_FILE")
+    if path:
+        Path(path).write_text(text, encoding="utf-8")
+
+
+def main():
+    argv = sys.argv[1:]
+    record("ARGV", "\n".join(argv))
+    count_file = os.environ.get("FAKE_CODEX_COUNT_FILE")
+    if count_file:
+        path = Path(count_file)
+        path.write_text(str(int(path.read_text() or 0) + 1) if path.exists() else "1")
+    if argv and argv[0] == "login":
+        record("LOGIN", sys.stdin.read())
+        print("Successfully logged in")
+        return 0
+    stdin_text = sys.stdin.read()
+    record("STDIN", stdin_text)
+    mode = os.environ.get("FAKE_CODEX_MODE", "ok")
+    if mode == "fail":
+        print("fake-codex fatal: sandbox blew up", file=sys.stderr)
+        return 3
+    if mode == "turnfail":
+        print(json.dumps({"type": "turn.failed",
+                          "error": {"message": "stub turn failure: no credits remaining"}}))
+        return 1
+    print(json.dumps({"type": "item.completed",
+                      "item": {"type": "agent_message",
+                               "text": "完成\nRUN-SUMMARY: fake-codex 2 新 0 沿用"}}))
+    print(json.dumps({"type": "turn.completed",
+                      "usage": {"input_tokens": 1000, "cached_input_tokens": 0,
+                                "output_tokens": 500}}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

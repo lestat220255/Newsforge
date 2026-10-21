@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""run-agent 离线测试桩：冒充 `claude -p`（headless）。
+
+run-agent 给 claude 的调用形状：`claude -p --output-format json
+--allowedTools ... [--model M]`，prompt 从 stdin 传入。
+行为由 FAKE_CLAUDE_MODE 选择：
+  ok             - 打印正常 JSON 信封（result 里带 RUN-SUMMARY 行），退出 0
+  fail           - stderr 打一行致命错误，退出 3
+  envelope-error - 打印 is_error=true 的信封，退出 0（run-agent 必须判失败）
+  hang           - 睡 30 秒（配合 --timeout 验超时退出码 11）
+记录接缝（设了才写）：FAKE_CLAUDE_ARGV_FILE / FAKE_CLAUDE_STDIN_FILE /
+FAKE_CLAUDE_COUNT_FILE。
+"""
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+
+def record(name, text):
+    path = os.environ.get(f"FAKE_CLAUDE_{name}_FILE")
+    if path:
+        Path(path).write_text(text, encoding="utf-8")
+
+
+def main():
+    stdin_text = sys.stdin.read()
+    record("ARGV", "\n".join(sys.argv[1:]))
+    record("STDIN", stdin_text)
+    count_file = os.environ.get("FAKE_CLAUDE_COUNT_FILE")
+    if count_file:
+        path = Path(count_file)
+        path.write_text(str(int(path.read_text() or 0) + 1) if path.exists() else "1")
+    mode = os.environ.get("FAKE_CLAUDE_MODE", "ok")
+    if mode == "hang":
+        time.sleep(30)
+        return 0
+    if mode == "fail":
+        print("fake-claude fatal: invalid api key", file=sys.stderr)
+        return 3
+    if mode == "envelope-error":
+        print(json.dumps({"result": "quota exceeded", "is_error": True,
+                          "total_cost_usd": 0.0}))
+        return 0
+    print(json.dumps({"result": "编辑完成\nRUN-SUMMARY: fake-claude 3 新 1 沿用",
+                      "is_error": False, "total_cost_usd": 0.0}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
