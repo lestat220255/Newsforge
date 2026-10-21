@@ -1,7 +1,7 @@
 # 编辑原则库（给 AI Agent 看）
 
 > 这 6 条是"严肃模式"预设。**默认不启用**——不是每个站都需要这么严肃。
-> 安装时（ONBOARDING 第 3 步）用多选弹窗问用户要哪些、要不要自定义；用户选中的 id 写入 `site.json` → `editorial.principles`，自定义口径写入 `editorial.custom`。
+> 安装时（playbook Q3-8）用多选问用户要哪些、要不要自定义；用户选中的 id 写入 `site.json` → `editorial.principles`，自定义口径写入 `editorial.custom`。
 > `pipeline/lib/edit.js` 会把选中原则的 prompt 规则注入 LLM prompt；`about` 页的"编辑原则"栏按选中项动态渲染。
 
 ## 1. 宁缺毋滥（no-filler）

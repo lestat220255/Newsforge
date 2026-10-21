@@ -48,4 +48,4 @@ gemini
 
 - 各家 CLI 里 Gemini CLI 的免费登录额度对"只做一次初始化"的用户最友好，但额度政策会变，以官方为准。
 - 推送 GitHub 时如需 PAT，按 playbook 引用的 `docs/PUSH-MODES.md` 办：token 存 `~/.config/newsforge/`，不进 git。
-- 每日自动运行不在本模式范围内（Gemini CLI 不能常驻）：初始化完成时执行者会按 playbook 的 Q9-2 向你说明手动运行方式。
+- 每日运行不由本 CLI 常驻承担：初始化的 Q9-2 会把三条路摆给你选——GitHub Actions 自动日更（`docs/ACTIONS.md`）、换到能建定时任务的宿主、本机手动跑（完整命令序列见 `docs/SETUP.md` 第 3 节）。

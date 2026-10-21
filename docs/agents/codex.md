@@ -21,7 +21,7 @@ codex --version   # 应能打印版本号
 export OPENAI_API_KEY=<你的 key>
 ```
 
-key 只放在你自己的终端环境里，不要写进仓库任何文件。
+key 只放在你自己的终端环境里，不要写进仓库任何文件。注意：**订阅与 API 是两个钱包**——Plus 的月费不会变成 API 余额，key 背后的账户没充值，跑起来会报 `no credits remaining`，那与你的订阅无关；不想充值就用上面的订阅登录。
 
 ## 工作目录
 
@@ -48,4 +48,4 @@ codex
 
 - Codex 的审批粒度是"每条命令"，初始化中途会停下来等你批准命令，属正常节奏，不要以为卡住了。
 - 推送 GitHub 时如需 PAT，按 playbook 引用的 `docs/PUSH-MODES.md` 办：token 存 `~/.config/newsforge/`，不进 git。
-- 每日自动运行不在本模式范围内（Codex 不能常驻）：初始化完成时执行者会按 playbook 的 Q9-2 向你说明手动运行方式。
+- 每日运行不由本 CLI 常驻承担：初始化的 Q9-2 会把三条路摆给你选——GitHub Actions 自动日更（`docs/ACTIONS.md`；Codex 在 Actions 里还能走 ChatGPT 订阅模式，见该文档的 CODEX_AUTH_JSON 拿法）、换到能建定时任务的宿主、本机手动跑（完整命令序列见 `docs/SETUP.md` 第 3 节）。

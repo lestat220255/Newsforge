@@ -76,11 +76,7 @@ EOF
 chmod 600 ~/.config/newsforge/r2.json
 ```
 
-**路径 B（GitHub Actions 无人值守）**：CI 里设 5 个 secret 环境变量即可，不用写文件
-
-```
-R2_ENDPOINT / R2_BUCKET / R2_PUBLIC_BASE_URL / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
-```
+**路径 B（GitHub Actions 无人值守）**：不用写文件，在仓库的 Actions 设置里配齐同名变量与密钥即可：Variables 放 `R2_ENDPOINT` / `R2_BUCKET` / `R2_PUBLIC_BASE_URL`（外加守卫 `NEWSFORGE_R2_ENABLED=true`），Secrets 放 `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`——完整清单与启用步骤见 `docs/ACTIONS.md`。workflow 会把它们注入为同名环境变量，管线照常读取（环境变量优先于本地配置文件）。
 
 字段级合并：**环境变量优先于配置文件**，两者可混用（比如 endpoint 放文件、key 走 env）。
 可用 `R2_CONFIG` 环境变量改配置文件路径。

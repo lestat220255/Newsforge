@@ -143,6 +143,12 @@ GitHub 定时抖动的如实披露都在 `docs/ACTIONS.md`。
 这条路径花你自己的 API 费用（或 Codex 的 ChatGPT 订阅额度），默认关闭：
 workflow 被仓库变量守卫，没显式启用就永远跳过，模板仓库自身不会空跑。
 
+**本机手动（试水 / 兜底）。**
+不想常驻、也不想开 Actions 时，可以在本机手动跑一次完整日更（抓取 →
+按同一份 `playbooks/daily.md` 编辑 → 构建 → QA → 提交），完整命令
+序列在 `docs/SETUP.md` 第 3 节。初始化模式与运行宿主的四种组合怎么
+选，见 `docs/ONBOARDING.md` 的「初始化之后」一节。
+
 > 代码里还留着一条更老的直连备用模式：给 `npm run build` 设置 `LLM_API_KEY`
 >（及可选 `LLM_BASE_URL` / `LLM_MODEL`，默认兼容 DeepSeek 接口）后 run.js
 > 会自己调 LLM API 编辑。它绕过了 agent 与 playbook 契约，只作备用保留，

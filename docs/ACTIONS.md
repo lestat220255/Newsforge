@@ -13,6 +13,24 @@
 - 已有 OpenAI / Anthropic / Google 任一家的 API key（或 Codex 可用的
   ChatGPT 订阅），愿意为每日编辑付按量费用的人
 
+## 先分清：订阅与 API 是两个钱包
+
+启用失败里最常见的一种，不是配置写错，而是钱付错了地方：
+
+- **订阅**（ChatGPT Plus/Pro、Claude Pro/Max）是包月会员：额度只在
+  产品内、以及用「订阅登录」的 CLI 里有效，按用量窗口（几小时 /
+  每周）限流，不按 token 扣钱。
+- **API key**（在 platform.openai.com / console.anthropic.com /
+  Google AI Studio 创建的）是独立的预付钱包：按 token 扣费，
+  新账户余额默认为 0。**订阅的钱不会流进 API 钱包。**
+
+所以：明明买了 Plus，agent 步却报 `no credits remaining`——key
+没错，是它背后的 API 钱包没充值。两条出路：给 API 钱包充值后继续
+用 apikey 模式；或 Codex 后端改走订阅模式（变量
+`NEWSFORGE_CODEX_AUTH=chatgpt` + 下面 Secrets 清单后的完整拿法），
+吃订阅额度、零现金成本。本模板目前只有 Codex 后端支持订阅模式跑
+Actions；Claude / Gemini 后端在 Actions 里只能用 API key。
+
 ## 启用步骤
 
 **前置**：已按 `playbooks/onboarding.md` 完成初始化，站点能本地构建。
@@ -66,6 +84,31 @@
 
 这些名称与 `.github/workflows/daily.yml` 里引用的集合由
 `scripts/check-actions-contract.py` 逐一对账，改名必须两边同步。
+
+### Codex 订阅模式：CODEX_AUTH_JSON 的完整拿法
+
+后端选 codex 且不想给 API 钱包充值时用这条路（吃 ChatGPT 订阅
+额度）。auth.json 就是你的 Codex 登录态文件，拿法一共四步：
+
+1. 在**你自己的电脑**上装好 Codex 并用订阅登录：
+   `npm install -g @openai/codex`，然后跑 `codex login --device-auth`
+   （或 `codex login`），用 ChatGPT 账号完成授权；
+   `codex login status` 应显示 Logged in using ChatGPT。
+2. 登录态保存在本机 `~/.codex/auth.json`。打开它，把**整个文件
+   内容原样**复制出来（不要改格式、不要只截其中一段）。
+3. 回仓库 Settings → Secrets and variables → Actions：
+   Secrets 里新建 `CODEX_AUTH_JSON`，值粘贴刚才的全部内容；
+   Variables 里把 `NEWSFORGE_CODEX_AUTH` 设为 `chatgpt`，
+   且**不要**设 `NEWSFORGE_CODEX_MODEL`（订阅账号拒绝 API 模型名）。
+   这种模式下 `OPENAI_API_KEY` 可以不配。
+4. Actions 页手动 Run workflow 试跑一次验证。订阅登录态会过期
+   （refresh token 轮换失效），失效时 agent 步报 401——届时回本机
+   重做第 1 步、把 secret 更新为新的 auth.json 内容即可，
+   其他配置不用动。
+
+安全须知：auth.json 等同你的 ChatGPT 登录凭证，只许进 Actions
+secret，绝不进仓库、不发给任何人；不用了就删掉这个 secret，
+并在本机 `codex logout`。
 
 ## 定时与抖动（如实披露）
 
@@ -126,6 +169,7 @@ API 控制台看这次的真实用量，再决定用哪个档位常态化。
 | Actions 里 workflow 显示 skipped、根本没进 job | 守卫变量没设 `true` | 按清单补 Variables，第一行 |
 | 「配置校验」步变红 | 缺密钥，或 site.json 没提交 | 报错写明了缺哪项；site.json 按启用步骤第 0 步处理 |
 | agent 步报 401 / 认证失败 | key 错或过期；或订阅模式的 auth 内容失效 | 换新 key 更新 secret；订阅模式重新 `codex login --device-auth` 并更新 auth secret |
+| agent 步报 `no credits remaining` / 余额不足 | API 钱包没充值（订阅的钱不在这个钱包里，见本页「先分清：订阅与 API 是两个钱包」） | 给 API 钱包充值后重跑；或 Codex 后端改走订阅模式（`NEWSFORGE_CODEX_AUTH=chatgpt` + CODEX_AUTH_JSON） |
 | agent 步超时（退出码 11） | 模块太多或原文太长，3600 秒没跑完 | 调大超时变量，或减模块/关 aiAnalysis；日志附件里能看到它干到哪一步 |
 | 「QA 把关」步变红 | edition 没过检查（结构/字数/图片对应等） | 站点保持昨天的版本，不会发半成品；下载本次运行的 `daily-logs` 附件看 QA 原始报错，修配置或信源后手动重跑 |
 | 提交步报「没有任何可提交变更」 | agent 没产出（抓取全灭或认证假过等） | 看 agent 日志附件；抓取问题先本地 `npm run probe` 看信源健康 |
