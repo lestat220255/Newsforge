@@ -16,6 +16,8 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 
 **零。** Cloudflare Pages 免费托管，不绑定域名的话直接用 `*.pages.dev` 子域名。唯一的成本是你自己的 AI 订阅（本来就有）——默认路径下，站内所有 AI 工作都由你的 AI 助手完成，不调用任何付费 API。（还有一条备用的全自动路径，需要自备 LLM API key，见下文「两条运行路径」。）
 
+没有 Muse 也行：初始化可以改用终端里的 agent CLI（Claude Code / Codex / Gemini CLI）+ 你自己的 API key 完成，两种模式走同一份初始化契约（见 `docs/ONBOARDING.md`）。说清楚成本口径：**初始化是一次性会话，token 量很小、成本极低**；持续的 API 成本只在你选择让"每日运行"也走 API 时才产生（见「两条运行路径」的路径 B），用 Muse 托管每日运行则一直是零 API 成本。
+
 ## 仓库会长多大（以 10 个模块为例）
 
 按每天约 64KB 的 edition 数据估算：
@@ -31,7 +33,7 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 
 1. 一个 **GitHub 账号**（存放网站代码）
 2. 一个 **Cloudflare 账号**（免费，托管网站）
-3. 一个 **Muse**（或者其他支持文件操作、定时任务、GitHub 推送的 AI 助手）——它负责和你对话、搭建网站、每天自动更新
+3. 一个 **AI 助手**：Muse（零 API 成本），或者终端 agent CLI（Claude Code / Codex / Gemini CLI，自备 API key 或用其订阅登录）——它负责和你对话、搭建网站。两种初始化模式怎么选、各自怎么开始，看 `docs/ONBOARDING.md`
 
 ## 完整搭建流程
 
@@ -43,7 +45,7 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 
 1. 一个 **GitHub 账号**（存放网站代码，公开/私有仓库都可以）
 2. 一个 **Cloudflare 账号**（免费，到 [dash.cloudflare.com](https://dash.cloudflare.com) 注册）
-3. 一个 **AI 助手**（推荐 Muse App；其他支持文件操作、定时任务、GitHub 推送的 AI 助手也行）——它负责和你对话、搭建网站、每天自动更新
+3. 一个 **AI 助手**（推荐 Muse App；或终端 agent CLI：Claude Code / Codex / Gemini CLI，各家的装法与登录见 `docs/agents/`）——它负责和你对话、搭建网站
 
 ### 第二阶段：建仓库（2 分钟，亲手做）
 
@@ -65,6 +67,8 @@ github.com/XXX/XXX(替换为实际仓库地址)
 
 AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访问令牌：GitHub → Settings → Developer settings → Personal access tokens → 勾 `repo` 权限）——配好后推送全自动，不用每次点审批；不配的话每次推送你都要亲手点一次确认
 
+> 用终端 agent CLI（BYOK 模式）的人：不用开新对话，在仓库根目录打开你的 CLI，粘贴的是同一句启动指令（原文在 `playbooks/onboarding.md` 第 1 节），各家 CLI 的具体操作看 `docs/agents/` 里对应的那份。两种模式的问题集和步骤完全一致。
+
 发完上面那段话，下面的路线图瞄一眼有个概念就行——具体每一步 AI 都会带你走。
 
 <details>
@@ -72,7 +76,7 @@ AI 会验证推送权限。**私有仓库推荐当场配一个 PAT**（个人访
 
 ### 接下来 30 分钟：AI 带你走完建站
 
-剧本文件 `docs/ONBOARDING.md` 已经在你的仓库里，AI 会自己去读。直接在第二阶段半的对话里继续，AI 会按顺序问你（每题先给推荐，你只管选；每题都有"以上都不合适，我来填写"）：
+初始化契约 `playbooks/onboarding.md` 已经在你的仓库里（`docs/ONBOARDING.md` 是模式选择入口），AI 会自己去读。直接在第二阶段半的对话里继续，AI 会按顺序问你（每题先给推荐，你只管选；每题都有"以上都不合适，我来填写"）：
    - **网站基本信息**：先确认仓库地址和推送权限；再问叫什么名字？（先问内容方向再给建议）一句话介绍？联系邮箱（可跳过）？目标读者是谁（可多选）？你在哪个时区？有没有自己的域名？
    - **选模块**：AI 按你的意图推荐几个领域，你多选 + 可自定义；模板自带一个"赛博风向"示例模块照着抄
    - **定信源**：每个模块从哪抓？AI 会按领域推荐，你也可以指定（RSS、博客、论坛、官方文档都行）
@@ -119,7 +123,8 @@ AI 会在对话里帮你建 3 个定时任务（模板在 `crons/` 里）：
 
 - `pipeline/` — 抓取 + 构建管线：`run.js` 只做调度，`lib/` 下分模块（`utils` 基础工具 / `fetchers` 信源抓取 / `edit` LLM 编辑 / `images` 图片管线 / `render` 静态渲染 / `r2-images` R2 图片上传）
 - `modules/cyber/` — 一个示例模块，照着它就能写自己的模块
-- `docs/` — 写给 AI 助手看的安装剧本和手册（`ONBOARDING.md` 是入口，`R2-IMAGES.md` 是图片存 R2 的完整指南）
+- `playbooks/` — 初始化契约（`onboarding.md`：问题集、产出物、完成判据的唯一真相，任何 AI 宿主都按它执行）
+- `docs/` — 写给 AI 助手看的手册（`ONBOARDING.md` 是模式选择入口，`agents/` 是各家终端 CLI 的适配说明，`R2-IMAGES.md` 是图片存 R2 的完整指南）
 - `crons/` — 定时任务模板：每日构建、推送确认、信源健康检查
 
 ## 两条运行路径（先看懂这个）

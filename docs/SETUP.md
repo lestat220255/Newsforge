@@ -1,5 +1,13 @@
 # Newsforge 建站手册（给 AI Agent 看）
 
+## 0. 初始化双模式（先读这节）
+
+初始化的契约只有一份：**`playbooks/onboarding.md`**（宿主无关：问题集、产出物、步骤序列、完成判据都在里面）。`docs/ONBOARDING.md` 只是模式选择入口，不保留第二份剧本。
+
+- **模式 A（Muse，零 API 成本）**：宿主提供对话、定时任务与推送通道，按 playbook + `crons/` 模板执行。
+- **模式 B（终端 agent CLI，BYOK）**：用户在仓库根目录打开 Claude Code / Codex / Gemini CLI（API key 或订阅登录），粘贴 playbook 第 1 节的启动指令，执行同一份契约。各家 CLI 的装法、登录与审批注意事项在 `docs/agents/` 下，一家一份。
+- 成本口径（对用户如实说）：初始化是一次性会话，token 量很小；持续 API 成本只在每日运行走 LLM API 路径（README「两条运行路径」的路径 B）时才产生。终端 CLI 不能常驻，模式 B 下每日自动运行需要常驻宿主或后续托管方案，初始化时按 playbook 的 Q9-2 如实向用户说明，不许假装建好定时任务。
+
 ## 1. 仓库结构
 
 ```
@@ -8,7 +16,8 @@ newsforge/
   site.json.example    # 配置模板
   pipeline/            # 抓取 + 构建管线
   modules/<id>/        # 模块目录，每个模块一个 module.json
-  docs/                # 本手册 + 安装剧本 + 信源推荐 + 抓取策略
+  docs/                # 本手册 + 安装入口（ONBOARDING.md）+ 信源推荐 + 抓取策略 + agents/（各家 CLI 适配）
+  playbooks/           # 初始化契约（onboarding.md，宿主无关，唯一真相）
   crons/               # 定时任务 prompt 模板
   public/              # 构建输出（Cloudflare Pages 发布目录）
   data/editions/       # 每日 edition JSON（构建产物进 git，用于归档页）
