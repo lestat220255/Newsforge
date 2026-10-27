@@ -62,6 +62,15 @@ export const EDITORIAL = {
   ...raw.editorial,
 };
 
+// 质量门配置（详情页质量规则的历史豁免口径）
+// evidenceSince：新规则（keyFacts evidence、当事方回应、分析三段式、publisher 必填）的生效起始日期。
+//   为空 = 对所有期数生效（新站默认）；已上线老站升级时填升级日期，老内容按旧口径豁免。
+//   渲染层（keyFacts 有效行过滤）与 QA（新检查）共用同一口径，不许两边各写一个日期。
+export const QUALITY = {
+  evidenceSince: null, // YYYY-MM-DD 或 null
+  ...raw.quality,
+};
+
 // 模块：modules/<id>/module.json，按 position 排序
 const modulesDir = join(ROOT, 'modules');
 export const SECTIONS = existsSync(modulesDir)

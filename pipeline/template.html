@@ -27,14 +27,18 @@
   }catch(e){}
 })();
 </script>
-<title>{{SITE_NAME}} · {{DATE}}</title>
-<meta name="description" content="{{SITE_NAME}} - {{TAGLINE}}">
+<title>{{PAGE_TITLE}}</title>
+<script type="speculationrules">
+{"prerender":[{"where":{"href_matches":"/archive/*"},"eagerness":"moderate"}]}
+</script>
+<meta name="description" content="{{PAGE_DESC}}">
 <link rel="alternate" type="application/rss+xml" title="{{SITE_NAME}} RSS" href="/feed.xml">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{SITE_NAME}}">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:title" content="{{SITE_NAME}} · {{DATE}}">
-<meta property="og:description" content="{{TAGLINE}}">
+<meta property="og:title" content="{{PAGE_TITLE}}">
+<meta property="og:description" content="{{PAGE_DESC}}">
+{{JSON_LD}}
 <meta property="og:url" content="{{CANONICAL}}">
 <meta property="og:image" content="{{OG_IMAGE}}">
 <meta name="twitter:card" content="summary_large_image">
@@ -167,6 +171,8 @@ main.grid{column-count:1;column-gap:22px}
 @media(min-width:900px){main.grid{column-count:var(--grid-cols,2)}}
 main.grid>section{break-inside:avoid;margin:0 0 22px}
 section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin:0;scroll-margin-top:78px}
+/* 板块懒渲染：首屏外板块延迟渲染，滚动到附近再算布局（容器 class 由 renderSection 输出，模板原先是裸 section、无 class） */
+.ed-section{content-visibility:auto;contain-intrinsic-size:auto 600px}
 section h2{margin:0 0 14px;font-size:20px}
 section h2 small{display:block;font-size:13px;color:var(--muted);font-weight:normal;margin-top:4px}
 .headline{background:var(--surface2);border-radius:10px;padding:18px;margin-bottom:14px}
@@ -258,7 +264,7 @@ ul.secondary li .search-btn{flex-shrink:0;margin-left:6px}
 
   <footer data-pagefind-ignore>
     <strong>免责声明：</strong>{{DISCLAIMER}}
-    <div class="build">本期日期：{{DATE}} · 构建于 {{BUILD_TIME}} · <a href="/about/">关于我们</a> · <a href="/feed.xml">RSS 订阅</a> · <a href="/about/#contact">发现错误？报错</a></div>
+    <div class="build">本期日期：{{DATE}} · 构建于 {{BUILD_TIME}} · <a href="/about/">关于我们</a> · <a href="/feed.xml">RSS 订阅</a> · <a href="/today.md">Markdown 版</a> · <a href="/about/#contact">发现错误？报错</a></div>
   </footer>
 </div>
 
@@ -333,11 +339,14 @@ window.addEventListener('DOMContentLoaded', function(){
   btn.addEventListener('click', function(){
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
-  /* 一键复制标题+原文链接（2026-10-07） */
+  /* 一键复制分享文本：【板块】标题 + 摘要 + 详情回流链接（原文链接在详情页内可达） */
   document.addEventListener('click', function(e){
     var b = e.target.closest('.copy-btn');
     if (!b) return;
-    var text = b.getAttribute('data-title') + '\n' + b.getAttribute('data-url');
+    var text = '【' + b.getAttribute('data-sec') + '】' + b.getAttribute('data-title');
+    var sum = b.getAttribute('data-summary');
+    if (sum) text += '\n\n' + sum;
+    text += '\n\n🔗 详情与原文：' + b.getAttribute('data-detail');
     var done = function(){
       b.classList.add('ok'); b.textContent = '已复制';
       setTimeout(function(){ b.classList.remove('ok'); b.textContent = '复制'; }, 1500);

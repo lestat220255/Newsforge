@@ -40,5 +40,9 @@
     "principles": [],
     "custom": "",
     "note": "编辑原则（默认全不启用，见 docs/editorial-principles.md）：安装时多选，如 [\"no-filler\", \"source-first\"]；custom 写自定义补充口径"
+  },
+  "quality": {
+    "evidenceSince": null,
+    "note": "质量门历史豁免：新规则（keyFacts evidence、当事方回应、分析三段式、publisher 必填）的生效起始日期；为空表示对所有期数生效（新站默认），老站升级时填升级日期、老内容按旧口径豁免。渲染层与 QA 共用此口径。"
   }
 }

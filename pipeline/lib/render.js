@@ -2,7 +2,7 @@
 // 依赖 utils / edit / images；被 run 调用。
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, cpSync } from 'node:fs';
 import { join } from 'node:path';
-import { SITE, FEATURES, EDITORIAL } from '../site-config.js';
+import { SITE, FEATURES, EDITORIAL, QUALITY } from '../site-config.js';
 import { principlesAboutHtml } from './principles.js';
 import { TOPICS, topicUrl, isValidTopic } from '../topics.js';
 import { preloadImgDims, imgWH, IMG_DIR } from './images.js';
@@ -63,6 +63,112 @@ function hotMark(e) {
   return e && e.hot && !e.unverified ? '🔥' : '';
 }
 
+// 详情页质量规则的可变文案（按站点语言）：zh-CN 为默认，其他语言回退 en。
+// 模板其余 chrome 文案仍为中文（见 playbooks/daily.md 说明），这里只覆盖新增规则的可变部分。
+const LABELS = {
+  'zh-CN': {
+    joiner: '、', descJoiner: '；',
+    analysisTitles: ['事实', '分析', '对读者的意义'],
+    inferenceMarker: 'AI 推断：',
+    noAnalysis: '暂无分析。',
+    responseTag: '回应情况',
+    responsePrefix: '当事方回应：',
+    sentenceEnd: '。',
+    notMentioned: '原文未提',
+    declinedDefault: '拒绝或未回应置评',
+    carriedPrefix: '沿用于 ',
+    corrected: '已更正',
+    feedCats: { pending: '待确认', multi: '多信源', update: '更新', carried: '沿用自' },
+    commentPrefix: 'AI 点评：',
+    detailLinkLabel: '站内详情',
+    origLinkLabel: '原文',
+    via: (pub, v) => `${pub}（经 ${v} 发现）`,
+    carriedNote: (d) => `（沿用自 ${d}）`,
+  },
+  en: {
+    joiner: ', ', descJoiner: '; ',
+    analysisTitles: ['Facts', 'Analysis', 'What it means for you'],
+    inferenceMarker: 'AI inference: ',
+    noAnalysis: 'No analysis yet.',
+    responseTag: 'Response',
+    responsePrefix: 'Party response: ',
+    sentenceEnd: '.',
+    notMentioned: 'Not mentioned in the source',
+    declinedDefault: 'Declined or did not respond to requests for comment',
+    carriedPrefix: 'Carried from ',
+    corrected: 'Corrected',
+    feedCats: { pending: 'Pending', multi: 'Multi-source', update: 'Update', carried: 'Carried over' },
+    commentPrefix: 'AI comment: ',
+    detailLinkLabel: 'Detail',
+    origLinkLabel: 'Source',
+    via: (pub, v) => `${pub} (via ${v})`,
+    carriedNote: (d) => `(carried from ${d})`,
+  },
+};
+
+function langLabels() {
+  const lang = String(SITE.language || 'zh-CN');
+  if (LABELS[lang]) return LABELS[lang];
+  if (/^zh/i.test(lang)) return LABELS['zh-CN'];
+  return LABELS.en;
+}
+
+// 核心事实内联标记解析：输入已转义；code 先行占位保护，再处理粗体，最后还原 code 并转换箭头
+function inlineFacts(escaped) {
+  const codes = [];
+  let s = escaped.replace(/`([^`]+)`/g, (_, c) => {
+    codes.push(c);
+    return `\u0000${codes.length - 1}\u0000`;
+  });
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong class="fact-hl">$1</strong>');
+  s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code class="fact-code">${codes[+i]}</code>`);
+  s = s.replace(/➔/g, '<span class="fact-arrow" aria-hidden="true">➔</span>');
+  return s;
+}
+
+// 核心事实渲染（键值对）：
+// - 有效行：旧字符串行恒有效；对象行在 quality.evidenceSince 之前（或未配置时恒）的期数恒有效，
+//   之后须带非空 evidence；空 content 的行直接跳过（QA 会硬拦，不应上线）。
+// - 有效行 < 3 条时返回 ''，调用方回退显示摘要块。
+// - extraRow：当事方回应固定行，只在有效行通过 ≥3 条门槛后追加，不计入有效行。
+function renderCoreFacts(facts, edDate, extraRow) {
+  if (!Array.isArray(facts) || !facts.length) return '';
+  const since = QUALITY.evidenceSince;
+  const needEvidence = !since || (typeof edDate === 'string' && edDate >= since);
+  const rows = [];
+  for (const f of facts) {
+    if (f && typeof f === 'object') {
+      if (needEvidence && !(typeof f.evidence === 'string' && f.evidence.trim())) continue;
+      const content = String(f.content ?? '').trim();
+      if (!content) continue;
+      rows.push({ tag: String(f.tag || ''), content });
+    } else {
+      const str = String(f).trim();
+      if (!str) continue;
+      const m = str.match(/^([^：\s]{1,4})：\s*(.+)$/);
+      rows.push(m ? { tag: m[1], content: m[2] } : { tag: '', content: str });
+    }
+  }
+  if (rows.length < 3) return '';
+  if (extraRow && extraRow.content) rows.push(extraRow);
+  const body = rows
+    .map(
+      ({ tag, content }) =>
+        `<div class="fact-row">${tag ? `<dt class="fact-tag">${esc(tag)}</dt>` : `<dt class="fact-tag fact-tag-empty" aria-hidden="true"></dt>`}<dd class="fact-content">${inlineFacts(esc(content))}</dd></div>`,
+    )
+    .join('\n      ');
+  return `<section class="block"><h2>核心事实</h2><dl class="facts-list">\n      ${body}\n      </dl></section>`;
+}
+
+// 分析内本站引用链接化：输入为已转义的分析 HTML。
+// 生成格式（zh-CN 约定，其他语言改写引导语、URL 格式不变）：本站 X 月 X 日报道（/detail/YYYY-MM-DD/板块-序号/）→ 可点击链接；裸 /detail/ URL 也转为链接。
+// 板块 id 用 [\w-]+（模板的模块 id 可含数字/连字符，不只小写字母）。
+function linkifySelfRefs(html) {
+  let s = html.replace(/本站([^，。；（）]*?)报道（(\/detail\/\d{4}-\d{2}-\d{2}\/[\w-]+-\d+\/)）/g, '<a href="$2">本站$1报道</a>');
+  s = s.replace(/(?<!href=")(\/detail\/\d{4}-\d{2}-\d{2}\/[\w-]+-\d+\/)/g, '<a href="$1">$1</a>');
+  return s;
+}
+
 // 图片宽高预读（2026-10-07）：构建时读 webp 实际尺寸，模板输出 width/height 防布局偏移
 
 function renderSection(sec, date) {
@@ -72,24 +178,25 @@ function renderSection(sec, date) {
   }
   const h = sec.headline;
   const headHtml = h
-    ? `<article class="headline"${h.sensitive ? ' data-sensitive="1"' : ''}>
+    ? `<article class="headline" id="item-${esc(sec.id)}-0"${h.sensitive ? ' data-sensitive="1"' : ''}>
       <div class="kicker">头条 ${sec.detailDate && sec.detailDate !== date ? `<span class="carried">沿用自 ${sec.detailDate.slice(5)}</span>` : ''} ${dateBadge(h.publishedAt)}</div>
       ${h.image ? `<a class="himg-link" href="${detailUrl(dDate, sec.id, 0)}" aria-label="${esc(h.title)}"><img class="himg" src="${esc(h.image)}"${imgWH(h.image)} alt="" loading="lazy"></a>` : ''}
       <h3><a href="${detailUrl(dDate, sec.id, 0)}">${hotMark(h)}${esc(h.title)}${trustBadges(h)}</a></h3>
       <p class="summary">${esc(h.summary)}</p>
       ${h.comment ? `<p class="comment">AI 点评：${esc(cleanComment(h.comment))}</p>` : ''}
-      <div class="meta">来源：${esc(sourceLine(h))} · <a href="${esc(h.url)}" target="_blank" rel="noopener" aria-label="阅读原文：${esc(h.title)}">阅读原文</a><button class="copy-btn" data-title="${esc(h.title)}" data-url="${esc(h.url)}" aria-label="复制标题和原文链接">复制</button><a class="search-btn" href="${esc(googleSearchUrl(h.title))}" target="_blank" rel="noopener" aria-label="在 ${searchEngineLabel()} 搜索此标题">搜索</a></div>
+      <div class="meta">来源：${esc(sourceLine(h))} · <a href="${esc(h.url)}" target="_blank" rel="noopener" aria-label="阅读原文：${esc(h.title)}">阅读原文</a><button class="copy-btn" data-sec="${esc(sec.name)}" data-title="${esc(h.title)}" data-summary="${esc(h.summary || '')}" data-detail="${esc(SITE.url + detailUrl(dDate, sec.id, 0))}" aria-label="复制分享文本">复制</button><a class="search-btn" href="${esc(googleSearchUrl(h.title))}" target="_blank" rel="noopener" aria-label="在 ${searchEngineLabel()} 搜索此标题">搜索</a></div>
     </article>`
     : '';
   const itemsHtml = (sec.items || [])
     .map(
-      (it, i) => `<li${it.sensitive ? ' data-sensitive="1"' : ''}>${dateBadge(it.publishedAt)}
+      (it, i) => `<li id="item-${esc(sec.id)}-${i + 1}"${it.sensitive ? ' data-sensitive="1"' : ''}>${dateBadge(it.publishedAt)}
       <span class="t"><a href="${detailUrl(dDate, sec.id, i + 1)}">${hotMark(it)}${esc(it.title)}${trustBadges(it)}</a></span>
       <span class="b">${esc(it.blurb || it.desc || '')}</span>
-      <span class="s">${esc(it.source || '')}</span><button class="copy-btn" data-title="${esc(it.title)}" data-url="${esc(it.url)}" aria-label="复制标题和原文链接">复制</button><a class="search-btn" href="${esc(googleSearchUrl(it.title))}" target="_blank" rel="noopener" aria-label="在 ${searchEngineLabel()} 搜索此标题">搜索</a></li>`,
+      <span class="s">${esc(it.source || '')}</span><button class="copy-btn" data-sec="${esc(sec.name)}" data-title="${esc(it.title)}" data-summary="${esc(it.summary || it.blurb || it.desc || '')}" data-detail="${esc(SITE.url + detailUrl(dDate, sec.id, i + 1))}" aria-label="复制分享文本">复制</button><a class="search-btn" href="${esc(googleSearchUrl(it.title))}" target="_blank" rel="noopener" aria-label="在 ${searchEngineLabel()} 搜索此标题">搜索</a></li>`,
     )
     .join('');
-  return `<section id="${esc(sec.id)}" data-pagefind-body>
+  // 板块容器 class="ed-section"：模板的容器原本是裸 <section id>，此处补 class 供懒渲染 CSS 命中（不要假设模板已有该类）。
+  return `<section id="${esc(sec.id)}" class="ed-section" data-pagefind-body>
     <h2>${esc(sec.name)}<small>${esc(sec.desc || '')}</small></h2>
     ${headHtml}
     ${itemsHtml ? `<ul class="secondary">${itemsHtml}</ul>` : ''}
@@ -162,7 +269,40 @@ function renderPage(tpl, edition, dates, canonical, showTgBanner) {
   const tgOn = showTgBanner && FEATURES.telegram.enabled && FEATURES.telegram.channel;
   const gridCols = { single: 1, double: 2, triple: 3 }[SITE.layout] || 2;
   const tgBanner = tgOn ? `<div class="tg-banner" id="tg-banner"><span class="msg">📡 在 Telegram 上订阅 ${esc(SITE.name)}，每早同步推送当日头条</span><a class="sub-btn" href="https://t.me/${esc(FEATURES.telegram.channel)}" target="_blank" rel="noopener">订阅 →</a><button class="close" aria-label="关闭">×</button></div>` : '';
+  // 动态标题与描述：当日可见板块头条标题累计 ≤45 字（至少 1 条），头条摘要拼接截断 150 字；
+  // 无头条时回退静态标题/站点 tagline。JSON-LD：当日头条 ItemList，url 用本站详情页（站内文章页为准），
+  // 不写作者、不冒充原创——摘要页不是原创报道，NewsArticle 只承载标题/日期/链接。
+  const L = langLabels();
+  const headTitles = visibleSections.map((s) => s.headline?.title).filter(Boolean);
+  const titleParts = [];
+  let titleLen = 0;
+  for (const t of headTitles) {
+    if (titleParts.length && titleLen + 1 + t.length > 45) break;
+    titleParts.push(t);
+    titleLen += (titleParts.length > 1 ? 1 : 0) + t.length;
+  }
+  const pageTitle = titleParts.length
+    ? `${titleParts.join(L.joiner)} | ${SITE.name} ${edition.date}`
+    : `${SITE.name} · ${edition.date}`;
+  const descText = visibleSections.map((s) => s.headline?.summary).filter(Boolean).join(L.descJoiner);
+  const pageDesc = descText ? descText.slice(0, 150) : SITE.tagline;
+  const ldItems = visibleSections.map((s, i) => s.headline ? {
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'NewsArticle',
+      headline: s.headline.title,
+      datePublished: s.headline.publishedAt || edition.date,
+      url: SITE.url + detailUrl(s.detailDate || edition.date, s.id, 0),
+    },
+  } : null).filter(Boolean);
+  const jsonLd = ldItems.length
+    ? `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'ItemList', name: `${SITE.name} ${edition.date}`, itemListElement: ldItems }).replace(/</g, '\\u003c')}</script>`
+    : '';
   return tpl
+    .replaceAll('{{PAGE_TITLE}}', esc(pageTitle))
+    .replaceAll('{{PAGE_DESC}}', esc(pageDesc))
+    .replaceAll('{{JSON_LD}}', jsonLd)
     .replaceAll('{{GRID_COLS}}', String(gridCols))
     .replaceAll('{{SITE_NAME}}', esc(SITE.name))
     .replaceAll('{{SITE_URL}}', esc(SITE.url))
@@ -237,23 +377,59 @@ function findRelated(cur, allArticles) {
   return uniq;
 }
 
-function renderDetail(tpl, ed, cur, prev, next, allArticles) {
+function renderDetail(tpl, ed, cur, prev, next, allArticles, meta) {
   const { sec, idx, entry, isHeadline } = cur;
+  const L = langLabels();
   const summary = isHeadline ? entry.summary || '' : entry.summary || entry.blurb || entry.desc || '';
-  const analysisHtml = (entry.analysis || '暂无分析。')
-    .split(/\n\n+/)
-    .map((p) => `<p>${esc(p.trim())}</p>`)
-    .join('\n      ');
-  // 核心事实卡（2026-10-08）：长原文的 3-6 条关键事实，摘要之后、分析之前
-  const keyFactsHtml = Array.isArray(entry.keyFacts) && entry.keyFacts.length
-    ? `<section class="block"><h2>核心事实</h2><ul class="facts">` +
-      entry.keyFacts.map((f) => `<li>${esc(String(f).trim())}</li>`).join('\n      ') +
-      `</ul></section>`
+  // 分析三小节：恰好 3 段时按 事实/分析/对读者的意义 分节渲染（小标题由前端按顺序加，生成侧不写）；
+  // 非 3 段保持原样。模板无历史包袱，不设日期门——旧分析若恰好 3 段也会被分节，属可接受的近似。
+  const rawParas = (entry.analysis || L.noAnalysis).split(/\n\n+/);
+  const cleanParas = rawParas.map((p) => p.trim()).filter(Boolean);
+  const analysisHtml = linkifySelfRefs(
+    cleanParas.length === 3
+      ? L.analysisTitles.map((h, i) => `<h3>${h}</h3><p>${esc(cleanParas[i])}</p>`).join('\n      ')
+      : rawParas.map((p) => `<p>${esc(p.trim())}</p>`).join('\n      '),
+  );
+  // 当事方回应三态：仅详情页渲染时附加，不改摘要原文，不影响首页/RSS；无字段（历史）→ 不渲染
+  // responded → 写回应内容；declined → 拒绝或未回应置评（须有原文依据，见 playbook）；not_mentioned → 原文未提
+  const pr = entry.partyResponse;
+  let respContent = '';
+  if (pr && typeof pr === 'object') {
+    if (pr.status === 'responded' && pr.text) respContent = String(pr.text);
+    else if (pr.status === 'declined') respContent = String(pr.text || L.declinedDefault);
+    else if (pr.status === 'not_mentioned') respContent = L.notMentioned;
+  }
+  const respRow = respContent ? { tag: L.responseTag, content: respContent } : null;
+  const respSentence = respContent
+    ? `${L.responsePrefix}${respContent}${/[。！？.!?]$/.test(respContent) ? '' : L.sentenceEnd}`
     : '';
-  const mainLink = `<li><a href="${esc(entry.url)}" target="_blank" rel="noopener">阅读原文：${esc(entry.title)}</a><span class="s">${esc(entry.source || '')}</span></li>`;
+  // 核心事实卡：有效行 < 3 条时不渲染事实卡，调用方回退显示摘要块（页面层合并：有事实不渲染摘要块）
+  const keyFactsHtml = renderCoreFacts(entry.keyFacts, ed.date, respRow);
+  const summaryBlock = keyFactsHtml
+    ? ''
+    : summary || respSentence
+      ? `<section class="block"><h2>摘要</h2>${summary ? `<p>${esc(summary)}</p>` : ''}${respSentence ? `<p>${esc(respSentence)}</p>` : ''}</section>`
+      : '';
+  // 来源区分：publisher + discovered_via；历史无字段时回退 source，输出不变
+  const sourceDisplay = entry.publisher
+    ? (entry.discovered_via ? L.via(entry.publisher, entry.discovered_via) : entry.publisher)
+    : (entry.source || '');
+  // 详情页顶部补充徽标：沿用（期数级属性，详情页跨期共用，故用反向映射判定）与已更正（链回更正页）
+  let extraBadges = '';
+  const carriedDate = meta && meta.carriedBy ? meta.carriedBy.get(`${ed.date}|${sec.id}`) : null;
+  if (carriedDate) extraBadges += `<span class="badge badge-carried">${L.carriedPrefix}${String(carriedDate).slice(5)}</span>`;
+  if (meta && meta.correctedUrls && meta.correctedUrls.has(cur.url)) {
+    extraBadges += `<a href="/corrections/" class="badge badge-corrected">${L.corrected}</a>`;
+  }
+  const detailBadges = trustBadges(entry) + extraBadges;
+  const mainLink = `<li><a href="${esc(entry.url)}" target="_blank" rel="noopener">阅读原文：${esc(entry.title)}</a><span class="s">${esc(sourceDisplay)}</span></li>`;
   const searchLink = `<li><a href="${esc(googleSearchUrl(entry.title))}" target="_blank" rel="noopener">在 ${searchEngineLabel()} 搜索此标题</a><span class="s">看多方报道与 AI 总结</span></li>`;
   // 相关往期报道：本站归档中同主题旧文（关键词匹配，同板块≥6分/跨板块≥8分）
-  const related = findRelated({ ...cur, date: ed.date }, allArticles || []);
+  // 自我引用强制列入：分析里引用的详情 URL 优先列入，上限仍为 3 条
+  const relatedKw = findRelated({ ...cur, date: ed.date }, allArticles || []);
+  const refUrls = [...new Set([...(entry.analysis || '').matchAll(/\/detail\/\d{4}-\d{2}-\d{2}\/[\w-]+-\d+\//g)].map((m) => m[0]))];
+  const byUrl = new Map((allArticles || []).map((a) => [a.url, a]));
+  const related = [...refUrls.map((u) => byUrl.get(u)).filter(Boolean), ...relatedKw.filter((r) => !refUrls.includes(r.url))].slice(0, 3);
   const relatedHtml = related.length
     ? `<section class="block"><h2>相关往期报道</h2><ul class="links">` +
       related
@@ -275,7 +451,7 @@ function renderDetail(tpl, ed, cur, prev, next, allArticles) {
     .replaceAll('{{SEC_NAME}}', esc(sec.name))
     .replaceAll('{{SEC_ID}}', esc(sec.id))
     .replaceAll('{{TITLE}}', esc(entry.title))
-    .replaceAll('{{TRUST_BADGES}}', trustBadges(entry) ? `<div class="trust-badges">${trustBadges(entry)}</div>` : '')
+    .replaceAll('{{TRUST_BADGES}}', detailBadges ? `<div class="trust-badges">${detailBadges}</div>` : '')
     .replaceAll('{{TITLE_SHORT}}', esc(shortTitle(entry.title)))
     .replaceAll('{{CANONICAL}}', esc(canonical))
     .replaceAll('{{ARCHIVE_URL}}', esc(archiveUrl))
@@ -287,10 +463,10 @@ function renderDetail(tpl, ed, cur, prev, next, allArticles) {
       ? `<div class="topic-tags">` + (entry.topics || []).filter(isValidTopic).map(t =>
           `<a href="${esc(topicUrl(t))}">${esc(t)}</a>`).join('') + `</div>`
       : '')
-    .replaceAll('{{SOURCE}}', esc(entry.source || ''))
+    .replaceAll('{{SOURCE}}', esc(sourceDisplay))
     .replaceAll('{{URL}}', esc(entry.url))
     .replaceAll('{{DIMG}}', entry.image ? `<img class="dimg" src="${esc(entry.image)}"${imgWH(entry.image)} alt="" loading="lazy">` : '')
-    .replaceAll('{{SUMMARY}}', esc(summary))
+    .replaceAll('{{SUMMARY_BLOCK}}', summaryBlock)
     .replaceAll('{{KEY_FACTS}}', keyFactsHtml)
     .replaceAll('{{ANALYSIS}}', analysisHtml)
     .replaceAll('{{LINKS}}', mainLink + '\n      ' + searchLink)
@@ -326,6 +502,24 @@ function renderDetailPages(dates) {
       );
     }
   }
+  // 沿用反向映射与更正链接集合：供详情页顶部徽标使用。
+  // carriedBy：`${原期数}|${板块}` → 沿用期数（沿用≤1 天故唯一）；correctedUrls：corrections.json 里带 detail 的详情 URL
+  const carriedBy = new Map();
+  const correctedUrls = new Set();
+  try {
+    const corrList = JSON.parse(readFileSync(join(DATA_DIR, 'corrections.json'), 'utf8'));
+    for (const c of corrList) if (c.detail) correctedUrls.add(c.detail);
+  } catch (e) { /* 无更正记录时不渲染徽标 */ }
+  for (const d of dates) {
+    const edC = loadEdition(d);
+    if (!edC) continue;
+    for (const sec of edC.sections) {
+      if (!sec.carried) continue;
+      const dd = sec.detailDate || d;
+      const key = `${dd}|${sec.id}`;
+      if (!carriedBy.has(key)) carriedBy.set(key, d);
+    }
+  }
   for (const d of dates) {
     const ed = loadEdition(d);
     if (!ed) continue;
@@ -347,7 +541,7 @@ function renderDetailPages(dates) {
       const si = sameSec.findIndex((o) => o.idx === cur.idx);
       const prev = si > 0 ? sameSec[si - 1] : null;
       const next = si < sameSec.length - 1 ? sameSec[si + 1] : null;
-      const html = renderDetail(tpl, ed, cur, prev, next, allArticles);
+      const html = renderDetail(tpl, ed, cur, prev, next, allArticles, { carriedBy, correctedUrls });
       const dir = join(DIST, 'detail', d, `${cur.sec.id}-${cur.idx}`);
       mkdirSync(dir, { recursive: true });
       writeFileSync(join(dir, 'index.html'), html);
@@ -359,6 +553,7 @@ function renderDetailPages(dates) {
 }
 
 function renderFeedXml(edition) {
+  const L = langLabels();
   const items = [];
   for (const sec of edition.sections) {
     if (sec.empty) continue;
@@ -369,7 +564,13 @@ function renderFeedXml(edition) {
       if (summary) desc += `<p>${esc(summary)}</p>`;
       if (isHeadline && entry.comment) desc += `<p>AI 点评：${esc(cleanComment(entry.comment))}</p>`;
       const link = SITE.url + detailUrl(dDate, sec.id, idx);
-      items.push({ title: entry.title || '(无标题)', link, desc, pubDate: rfc2822(entry.publishedAt) });
+      // 标签与原文链接：category 带可信度/沿用标签（不用标题后缀，避免污染标题与搜索核查），<source url> 带原文链接
+      const cats = [];
+      if (entry.unverified) cats.push(L.feedCats.pending);
+      if (entry.multi_source) cats.push(L.feedCats.multi);
+      if (entry.is_update) cats.push(L.feedCats.update);
+      if (sec.carried) cats.push(L.feedCats.carried);
+      items.push({ title: entry.title || '(无标题)', link, desc, pubDate: rfc2822(entry.publishedAt), cats, origUrl: entry.url || '', origName: entry.publisher || entry.source || '' });
     };
     if (sec.headline) pushItem(sec.headline, 0, true);
     (sec.items || []).forEach((it, i) => pushItem(it, i + 1, false));
@@ -377,12 +578,14 @@ function renderFeedXml(edition) {
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n<channel>\n` +
     `<title>${esc(SITE.name)}</title>\n<link>${esc(SITE.url + '/')}</link>\n` +
-    `<description>${esc(SITE.tagline)}</description>\n<language>zh-CN</language>\n` +
+    `<description>${esc(SITE.tagline)}</description>\n<language>${esc(SITE.language)}</language>\n` +
     `<lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n` +
     items
       .map(
         (it) =>
           `<item>\n<title>${esc(it.title)}</title>\n<link>${esc(it.link)}</link>\n` +
+          (it.cats || []).map((c) => `<category>${esc(c)}</category>\n`).join('') +
+          (it.origUrl ? `<source url="${esc(it.origUrl)}">${esc(it.origName)}</source>\n` : '') +
           `<guid>${esc(it.link)}</guid>\n<pubDate>${it.pubDate}</pubDate>\n` +
           `<description><![CDATA[${it.desc}]]></description>\n</item>`,
       )
@@ -390,6 +593,33 @@ function renderFeedXml(edition) {
     `\n</channel>\n</rss>\n`;
   writeFileSync(join(DIST, 'feed.xml'), xml);
   console.log(`RSS 已生成：${items.length} 条`);
+}
+
+// Markdown 版当日日报：供 AI 搜索引擎直接抓取引用；每构建写最新一期
+function renderTodayMd(edition) {
+  const L = langLabels();
+  const visibleSections = (edition.sections || []).filter((s) => !s.empty && !s.hidden);
+  const d = edition.dailyDigest || {};
+  const lines = [`# ${SITE.name} · ${edition.date}${d.issue ? `（第 ${d.issue} 期）` : ''}`, '', SITE.tagline, ''];
+  for (const sec of visibleSections) {
+    const dDate = sec.detailDate || edition.date;
+    lines.push(`## ${sec.name}${sec.carried ? L.carriedNote(String(sec.detailDate).slice(5)) : ''}`, '');
+    const h = sec.headline;
+    if (h) {
+      lines.push(`### ${h.title}`, '');
+      if (h.summary) lines.push(h.summary, '');
+      if (h.comment) lines.push(`${L.commentPrefix}${cleanComment(h.comment)}`, '');
+      lines.push(`[${L.detailLinkLabel}](${SITE.url + detailUrl(dDate, sec.id, 0)}) ｜ [${L.origLinkLabel}](${h.url})`, '');
+    }
+    (sec.items || []).forEach((it, i) => {
+      lines.push(`- ${it.title}`);
+      const blurb = it.blurb || it.summary || '';
+      if (blurb) lines.push(`  ${blurb}`);
+      lines.push(`  [${L.detailLinkLabel}](${SITE.url + detailUrl(dDate, sec.id, i + 1)}) ｜ [${L.origLinkLabel}](${it.url})`);
+    });
+    lines.push('');
+  }
+  writeFileSync(join(DIST, 'today.md'), lines.join('\n'));
 }
 
 // 月历网格（仅归档页）：周一起始；mode='anchor' 链接站内锚点，mode='page' 链接到月页 + 锚点
@@ -610,7 +840,7 @@ function renderCorrections(today) {
   const body = list.length
     ? list.slice().reverse().map((c) =>
         `<div class="card"><div class="cdate">${esc(c.date || '')}</div>` +
-        `<div class="citem">${esc(c.item || '')}</div>` +
+        `<div class="citem">${c.detail ? `<a href="${esc(c.detail)}">${esc(c.item || '')}</a>` : esc(c.item || '')}</div>` +
         `<div class="cfix">更正：${esc(c.change || '')}</div>` +
         (c.reason ? `<div class="creason">原因：${esc(c.reason)}</div>` : '') +
         `</div>`
@@ -719,6 +949,7 @@ async function renderAll({ today } = {}) {
     { loc: SITE.url + '/', lastmod: latest },
     { loc: SITE.url + '/archive/', lastmod: latest },
     { loc: SITE.url + '/feed.xml', lastmod: latest },
+    { loc: SITE.url + '/today.md', lastmod: latest },
   ];
   for (const d of dates) {
     const ed = loadEdition(d);
@@ -737,7 +968,10 @@ async function renderAll({ today } = {}) {
   const monthUrls = renderMonthPages(allDates);
   const detailUrls = renderDetailPages(dates);
   const latestEd = loadEdition(latest);
-  if (latestEd) renderFeedXml(latestEd);
+  if (latestEd) {
+    renderFeedXml(latestEd);
+    renderTodayMd(latestEd);
+  }
   // 关于页
   const aboutTpl = readFileSync(join(PIPELINE_DIR, 'about-template.html'), 'utf8');
   const principlesList = principlesAboutHtml(EDITORIAL.principles);
@@ -766,8 +1000,9 @@ async function renderAll({ today } = {}) {
 
 export {
   renderAll, renderPage, renderSection, renderDigest, renderDetailPages,
-  renderFeedXml, renderArchiveIndex, renderMonthCalendar, renderMonthSections, renderMonthPages,
+  renderFeedXml, renderTodayMd, renderArchiveIndex, renderMonthCalendar, renderMonthSections, renderMonthPages,
   renderTopicPages, renderCorrections,
   renderSitemap, renderSearchIndex, assertNoChainedDetailDate,
   sourceLine, trustBadges, hotMark, extractKeywords, findRelated,
+  inlineFacts, renderCoreFacts, linkifySelfRefs, langLabels,
 };
