@@ -39,18 +39,22 @@ async function callLLM(section, items) {
     : '';
   const analysisRule = wantAnalysis
     ? '3. **每条新闻都必须写 AI 分析（analysis）和核心事实（keyFacts），这是必要逻辑，不许留空：**\n' +
-      '   - 头条 analysis：2-3 段中文，讲透来龙去脉、对读者的实际影响、值得关注的后续；次条 analysis：1-2 段，点出关键看点即可。\n' +
-      '   - keyFacts：3-6 条，每条 30 字以内，只写报道中的硬事实（数字/人名/时间/地点/动作），优先选摘要里没提到的。\n' +
+      '   - analysis：恰好 3 段，依次讲事实、分析、对读者的意义；总长 ≤300 字；用站点语言写（site.json 的 language）。\n' +
+      '   - 分析段（第 2 段）里的推断句，句首标“AI 推断：”（非中文站用本站语言的对应标记）；对读者的意义只写描述性影响，不写“应当”式结论。\n' +
+      '   - keyFacts：3-6 条 {tag, content, evidence} 对象；tag 为 2–4 个字的维度标签、不含标点；content ≤30 可见字（允许 **加粗**、`代码`、➔ 三种标记），只写报道中的硬事实（数字/人名/时间/地点/动作），优先选摘要里没提到的；evidence 为原文对应句摘录（每条必填）。\n' +
+      '   - partyResponse：当事方回应三态 {status, text}——responded（写回应内容）/ declined（仅原文显示被问及未回应或拒绝时用，须有原文依据）/ not_mentioned（原文未提，text 为空）。\n' +
+      '   - 标题断言自检：标题每个断言须能在正文找到对应原句，找不到降级措辞；强断言词慎用（按语言词表，见 playbooks/daily.md）。\n' +
+      '   - 自我引用：分析里引用本站往期报道时写成“本站 X 月 X 日报道（/detail/YYYY-MM-DD/板块-序号/）”格式，引用条目须真实存在于该日期的 edition 中，找不到不得生成这句话。\n' +
       `   - 口吻：${tone}。\n` +
       '   - 铁律：分析里的每个事实断言必须能在摘要或 keyFacts 中找到对应；观点明确标注为看法，不许把判断写成事实。\n'
     : '';
   // JSON schema 按开关动态组装
-  const hSchema = { title: "", url: "", source: "", publishedAt: "", summary: "" };
+  const hSchema = { title: "", url: "", source: "", publisher: "", publishedAt: "", summary: "" };
   if (wantComment) hSchema.comment = "";
-  if (wantAnalysis) { hSchema.analysis = ""; hSchema.keyFacts = []; }
+  if (wantAnalysis) { hSchema.analysis = ""; hSchema.keyFacts = []; hSchema.discovered_via = ""; hSchema.partyResponse = { status: "", text: "" }; }
   Object.assign(hSchema, { hot: true, unverified: false, multi_source: false, is_update: false });
-  const iSchema = { title: "", url: "", source: "", publishedAt: "", blurb: "" };
-  if (wantAnalysis) { iSchema.analysis = ""; iSchema.keyFacts = []; }
+  const iSchema = { title: "", url: "", source: "", publisher: "", publishedAt: "", blurb: "" };
+  if (wantAnalysis) { iSchema.analysis = ""; iSchema.keyFacts = []; iSchema.discovered_via = ""; iSchema.partyResponse = { status: "", text: "" }; }
   Object.assign(iSchema, { hot: true, unverified: false, multi_source: false, is_update: false });
   const schemaJson = JSON.stringify({ headline: hSchema, items: [iSchema], hidden: false });
   const prompt =
@@ -58,7 +62,7 @@ async function callLLM(section, items) {
     `请完成：\n` +
     `1. 选出 1 条头条 + 最多 5 条次条。标准：对读者最有用的"窗口 / 机会 / 重大变化"（板块定位：${section.desc}）。\n` +
     `   头条 48 小时规则：头条必须是 48 小时内发布的最新重要新闻；无够格头条则该板块隐藏（hidden:true）。\n` +
-    `   信源要求：优先选择有多家媒体报道的新闻（至少两个独立信源）；实在只有一个信源也可收，但不要硬凑。\n   可信度权重（2026-10-07）：单信源且明确标注"未经证实/待确认"的新闻，可信度最低。头条不得选未证实新闻（无更优选项时宁可 hidden）；次条中未证实新闻排在已证实之后。JSON 里给每条加 "unverified": true/false。\n` +
+    `   信源要求：优先选择有多家媒体报道的新闻（至少两个独立信源）；实在只有一个信源也可收，但不要硬凑。\n   出版方：每条写 "publisher"（原文出版方，必填）；仅当经聚合器/社交平台发现时写 "discovered_via"。\n   可信度权重（2026-10-07）：单信源且明确标注"未经证实/待确认"的新闻，可信度最低。头条不得选未证实新闻（无更优选项时宁可 hidden）；次条中未证实新闻排在已证实之后。JSON 里给每条加 "unverified": true/false。\n` +
     `   补充源降级：标注 [补充源] 的候选来自 GDELT 全网抓取或 Mastodon 趋势热榜，相关度噪音较大；主力源有够格条目时优先选主力源，补充源仅作备选。\n` +
     `   重要度：头条和次条都打 hot 标记（true=真正的热点才打，不要滥用）。\n` +
     headlineRule +
