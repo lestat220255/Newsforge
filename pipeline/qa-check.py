@@ -11,13 +11,17 @@ DATA = os.path.join(ROOT, 'data')
 EDITIONS = os.path.join(DATA, 'editions')
 PUBLIC_IMG = os.path.join(ROOT, 'public', 'images')
 
-passed, failed = [], []
+passed, failed, warned = [], [], []
 
 def ok(name):
     passed.append(name)
 
 def fail(name, detail=''):
     failed.append(f'{name}: {detail}')
+
+def warn(name, detail=''):
+    # 只警告不硬拦：复核提醒，不是定罪；不影响退出码
+    warned.append(f'{name}: {detail}')
 
 def load_json(path):
     with open(path, encoding='utf-8') as f:
@@ -96,6 +100,24 @@ if ed is None:
 
 HL_REQ = ['title', 'summary', 'comment', 'analysis', 'url', 'publishedAt', 'source']
 IT_REQ = ['title', 'blurb', 'summary', 'analysis', 'url', 'publishedAt', 'source']
+
+# 新规则生效口径（site.json → quality.evidenceSince）：新检查（evidence/回应/三段式/publisher/300 字上限）
+# 只约束生效日期起的新生成；未配置时对所有期数生效（新站默认）；沿用板块恒豁免（旧内容原样复用）。
+# 语言口径同 site.json → site.language（未配置时读 site.json.example，默认 zh-CN）。
+def _site_conf():
+    for p in [os.path.join(ROOT, 'site.json'), os.path.join(ROOT, 'site.json.example')]:
+        try:
+            return load_json(p)
+        except Exception:
+            continue
+    return {}
+_SITE_CONF = _site_conf()
+SITE_LANG = str(_SITE_CONF.get('site', {}).get('language') or 'zh-CN')
+EVIDENCE_SINCE = _SITE_CONF.get('quality', {}).get('evidenceSince')
+if not (isinstance(EVIDENCE_SINCE, str) and EVIDENCE_SINCE):
+    EVIDENCE_SINCE = None
+NEW_RULES = EVIDENCE_SINCE is None or date >= EVIDENCE_SINCE
+INFERENCE_MARKER = 'AI 推断：' if SITE_LANG.startswith('zh') else 'AI inference: '
 for sec in ed['sections']:
     sid = sec['id']
     # 板块名必填（2026-10-18 空白事故：edition 漏写 name 会导致导航/标题/面板全空白上线；QA 直接拦截）
@@ -113,8 +135,10 @@ for sec in ed['sections']:
             fail(f'{sid} 头条缺字段 {k}', '')
     if len(h.get('summary', '')) > 200:
         fail(f'{sid} 头条摘要超 200 字', str(len(h.get('summary', ''))))
-    if len(h.get('analysis', '')) > 500:
-        fail(f'{sid} 头条分析超 500 字', str(len(h.get('analysis', ''))))
+    # 新分析规则：头条分析总长 ≤300 字；沿用板块是旧内容原样复用（或未到生效日期），沿用旧 500 字上限，否则每次沿用都会误报
+    _acap = 500 if sec.get('carried') or not NEW_RULES else 300
+    if len(h.get('analysis', '')) > _acap:
+        fail(f'{sid} 头条分析超 {_acap} 字', str(len(h.get('analysis', ''))))
     if not str(h.get('url', '')).startswith('http'):
         fail(f'{sid} 头条 url 非法', h.get('url', '')[:50])
     # 不变式
@@ -137,7 +161,21 @@ for sec in ed['sections']:
         ok(f'{sid} 次条 ≤5')
     else:
         fail(f'{sid} 次条超 5', str(len(sec.get('items', []))))
-    # 25. keyFacts（2026-10-08）：有则 3-6 条、每条 ≤30 字
+    # 25. keyFacts：有则 3-6 条；新格式 {tag, content} 与旧字符串并存
+    # 可见字数 = 去掉 ** 与反引号后的长度（➔ 按 1 字计）；tag 不合规只警告不硬拦
+    # tag 规则按语言配置：zh-CN 示例为 2–4 个 CJK 字符、禁标点；其他语言为 1–20 字、不含标点
+    def _visible(text):
+        return re.sub(r'[*`]+', '', str(text))
+    def _tag_warn(tag):
+        if tag is None or tag == '':
+            return '缺 tag'
+        if SITE_LANG.startswith('zh'):
+            if not (2 <= len(tag) <= 4 and all('\u4e00' <= c <= '\u9fff' for c in tag)):
+                return 'tag 不合规'
+        else:
+            if not (1 <= len(tag) <= 20 and not re.search(r'[.,;:!?、。！？；：]', tag)):
+                return 'tag 不合规'
+        return None
     for entry, label in [(h, '头条')] + [(it, f'次条{i}') for i, it in enumerate(sec.get('items', []))]:
         kf = entry.get('keyFacts')
         if kf is None:
@@ -145,13 +183,146 @@ for sec in ed['sections']:
         if not isinstance(kf, list) or not (3 <= len(kf) <= 6):
             fail(f'{sid} {label} keyFacts 条数非法', f'{label}:{entry.get("title","")[:20]} n={len(kf) if isinstance(kf, list) else "?"}')
             continue
+        bad_name, bad_detail = None, ''
         for f in kf:
-            if len(str(f)) > 30:
-                fail(f'{sid} {label} keyFacts 超 30 字', str(f)[:34])
+            if isinstance(f, dict):
+                content = f.get('content')
+                if not isinstance(content, str) or not content:
+                    bad_name, bad_detail = f'{label} keyFacts content 缺失/非法', entry.get('title', '')[:20]
+                    break
+                if len(_visible(content)) > 30:
+                    bad_name, bad_detail = f'{label} keyFacts 超 30 字', content[:34]
+                    break
+                tw = _tag_warn(f.get('tag'))
+                if tw:
+                    warn(f'{sid} {label} keyFacts {tw}', entry.get('title', '')[:20])
+            elif isinstance(f, str):
+                if len(f) > 30:
+                    bad_name, bad_detail = f'{label} keyFacts 超 30 字', f[:34]
+                    break
+            else:
+                bad_name, bad_detail = f'{label} keyFacts 元素类型非法', entry.get('title', '')[:20]
                 break
+        if bad_name:
+            fail(f'{sid} {bad_name}', bad_detail)
         else:
             ok(f'{sid} {label} keyFacts 合规')
 ok(f'{date} 结构与字数检查完成')
+
+# ---------- 27. 详情页质量规则（evidence/回应/自我引用/三段式/publisher/低信息）：只约束生效日期起的新生成 ----------
+# 生效口径见 NEW_RULES（quality.evidenceSince，未配置则对所有期数生效）；沿用/隐藏板块恒豁免（旧内容原样复用）
+if NEW_RULES:
+    # 全站详情 URL 集合（供自我引用解析校验；口径同第 6 项）
+    valid_urls = set()
+    for d in dates:
+        e_all = load_json(os.path.join(EDITIONS, f'{d}.json'))
+        for s_all in e_all['sections']:
+            dd_all = s_all.get('detailDate') or d
+            for idx_all, entry_all in enumerate([s_all.get('headline')] + list(s_all.get('items', []))):
+                if entry_all:
+                    valid_urls.add(f"/detail/{dd_all}/{s_all['id']}-{idx_all}/")
+    for sec in ed['sections']:
+        if sec.get('hidden') or sec.get('carried'):
+            continue
+        sid = sec['id']
+        for entry, label in [(sec.get('headline') or {}, '头条')] + [(it, f'次条{i}') for i, it in enumerate(sec.get('items', []))]:
+            if not entry:
+                continue
+            title = entry.get('title', '')[:20]
+            # 当事方回应三态必填；responded 须有回应内容
+            pr = entry.get('partyResponse')
+            if not isinstance(pr, dict) or pr.get('status') not in ('responded', 'declined', 'not_mentioned'):
+                fail(f'{sid} {label} partyResponse 缺失/非法', title)
+            elif pr.get('status') == 'responded' and not (isinstance(pr.get('text'), str) and pr.get('text').strip()):
+                fail(f'{sid} {label} partyResponse responded 缺回应内容', title)
+            else:
+                ok(f'{sid} {label} partyResponse 合规')
+            # keyFacts evidence：dict 事实行须带 evidence；标签不得在值里重复；有效行 < 3 条不许写 keyFacts
+            kf = entry.get('keyFacts')
+            if isinstance(kf, list) and kf:
+                bad = None
+                valid_n = 0
+                for f in kf:
+                    if isinstance(f, dict):
+                        if not (isinstance(f.get('evidence'), str) and f.get('evidence').strip()):
+                            bad = f'{label} keyFacts 缺 evidence'
+                            break
+                        if f.get('tag') and f.get('tag') in (f.get('content') or ''):
+                            bad = f'{label} keyFacts 标签与值重复'
+                            break
+                        valid_n += 1
+                    elif isinstance(f, str):
+                        valid_n += 1
+                if bad:
+                    fail(f'{sid} {bad}', title)
+                elif valid_n < 3:
+                    fail(f'{sid} {label} keyFacts 有效行不足 3 条', title)
+                else:
+                    ok(f'{sid} {label} keyFacts evidence 合规')
+            # 自我引用：分析里每处“本站…报道”须带可解析的详情链接；所有 /detail/ 链接须指向已存在、早于本期的条目
+            analysis = entry.get('analysis') or ''
+            urls = re.findall(r'/detail/\d{4}-\d{2}-\d{2}/[\w-]+-\d+/', analysis)
+            if SITE_LANG.startswith('zh'):
+                mentions = re.findall(r'本站[^，。；\n]{0,30}报道', analysis)
+                if mentions:
+                    if len(urls) < len(mentions):
+                        fail(f'{sid} {label} 自我引用缺详情链接', title)
+                    else:
+                        bad_url = [u for u in urls if u not in valid_urls or u.split('/')[2] >= date]
+                        if bad_url:
+                            fail(f'{sid} {label} 自我引用链接无法解析或非往期', f'{title} {bad_url[0]}')
+                        else:
+                            ok(f'{sid} {label} 自我引用可解析')
+            if not SITE_LANG.startswith('zh') or not re.findall(r'本站[^，。；\n]{0,30}报道', analysis):
+                bad_url = [u for u in urls if u not in valid_urls or u.split('/')[2] >= date]
+                if bad_url:
+                    fail(f'{sid} {label} 自我引用链接无法解析或非往期', f'{title} {bad_url[0]}')
+                elif urls and not SITE_LANG.startswith('zh'):
+                    ok(f'{sid} {label} 自我引用可解析')
+            # 分析三段式（事实/分析/对读者的意义）+ 分析小节须含 AI 推断标注
+            paras = [p.strip() for p in (entry.get('analysis') or '').split('\n\n') if p.strip()]
+            if len(paras) != 3:
+                fail(f'{sid} {label} 分析非三段式', title)
+            elif INFERENCE_MARKER not in paras[1]:
+                fail(f'{sid} {label} 分析小节缺 AI 推断标注', title)
+            else:
+                ok(f'{sid} {label} 分析三段式合规')
+            if label != '头条' and len(entry.get('analysis') or '') > 300:
+                fail(f'{sid} {label} 分析超 300 字', title)
+            # 语言一致性（只警告，仅 CJK 站）：去掉 AI 推断标记与 /detail/ 引用链接后，仍含 4 字母以上英文词
+            if SITE_LANG.startswith('zh'):
+                _clean = re.sub(r'/detail/\d{4}-\d{2}-\d{2}/[\w-]+-\d+/', '', re.sub(r'AI 推断', '', entry.get('analysis') or ''))
+                if re.search(r'[A-Za-z]{4,}', _clean):
+                    warn(f'{sid} {label} 分析含英文词', title)
+            # publisher 必填（discovered_via 仅适用时写，不硬拦）
+            if not (isinstance(entry.get('publisher'), str) and entry.get('publisher').strip()):
+                fail(f'{sid} {label} publisher 缺失', title)
+            else:
+                ok(f'{sid} {label} publisher 合规')
+            # 低信息嫌疑（只警告）：摘要 + 分析 ≥2 处“原文未提”
+            if ((entry.get('summary') or '') + (entry.get('analysis') or '')).count('原文未提') >= 2:
+                warn(f'{sid} {label} 低信息嫌疑（≥2 处原文未提）', title)
+
+# ---------- 28. 标题强断言词筛查（只警告不硬拦，供编辑人工复核） ----------
+# 词表按语言配置：zh-CN 为示例；英文用词界匹配（避免 issues 命中 sues 这类子串误报）；未配置的语言跳过本项
+ASSERTION_PATTERNS = {
+    'zh-CN': [(w, w) for w in ['起诉', '驳斥', '否认', '证实', '违反', '首例', '首次']] + [(r'第\d+次', '第N次')],
+    'en': [(r'\b' + w + r'\b', w) for w in ['sues', 'sued', 'denies', 'denied', 'confirms', 'confirmed', 'violates', 'violated', 'first-ever']],
+}
+_lang_key = SITE_LANG if SITE_LANG in ASSERTION_PATTERNS else ('zh-CN' if SITE_LANG.startswith('zh') else None)
+if _lang_key:
+    _flags = re.I if _lang_key == 'en' else 0
+    for sec in ed['sections']:
+        if sec.get('hidden'):
+            continue
+        sid = sec['id']
+        for entry in [sec.get('headline')] + list(sec.get('items', [])):
+            if not entry:
+                continue
+            t = entry.get('title', '')
+            hit = [name for pat, name in ASSERTION_PATTERNS[_lang_key] if re.search(pat, t, _flags)]
+            if hit:
+                warn(f'{sid} 标题含强断言词', f"{','.join(hit)} | {t[:30]}")
 
 # 26. dailyDigest（2026-10-09 起）：topPicks 只指向 hot 头条、≤配置条数（oneLiner 已于 2026-10-17 随 A 合并移除，不再校验）
 dd = ed.get('dailyDigest')
@@ -320,4 +491,6 @@ print(f'\n===== QA 后端检查 {date} =====')
 print(f'通过 {len(passed)} / 失败 {len(failed)}')
 for f in failed:
     print('  FAIL:', f)
+for w in warned:
+    print('  WARN:', w)
 sys.exit(1 if failed else 0)
