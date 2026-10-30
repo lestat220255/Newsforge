@@ -37,6 +37,7 @@
   - 摘要里不许编造：原文没有的写"原文未提"
   - 拿不准就停下来问用户，不许自己猜
 - **编辑原则**：只引用 `docs/editorial-principles.md`（6 条预设的 id 与说明都在那里），本文件不复制其内容；用户选中的 id 写入 `site.json → editorial.principles`。
+- **宪法生效点**：S3b 填完 §一～§四、§六 后宪法生效，S10 补管线时间后完整；S11 验收时不得有剩余占位符。
 
 ## 4. 必答问题集
 
@@ -183,6 +184,7 @@
 | `site.json` | Q0–Q9 的答案 | 格式以 `site.json.example` 为准（见 5.2 字段表）；仓库里只有 example，实文件由初始化生成 |
 | `modules/<id>/module.json` ×N | Q2 | 每个启用模块一份，格式照 `modules/cyber/module.json`；`id` 与目录名一致，创建后不可改 |
 | 示例模块删除 | Q2 完成后 | `modules/cyber/` 整体删除；用户明确要保留作正式模块时除外 |
+| `constitution.md` | S3b 主填写（§一～§四、§六），S10 补管线时间 | 根目录模板文件，初始化时按本站情况填占位符；S11 前不得有剩余占位符；随 S7 或更早的推送进 git |
 | `public/theme.css` | Q5 | 只改这一个文件的 CSS 变量，不许逐个改模板 HTML |
 | `public/logo.png`、`public/favicon.png` | Q5 | favicon 由 logo 取中心正方形缩到 256×256 生成，不许漏 |
 | `.gitignore` 调整 | Q6 | 选 b64：删 `public/images/*.webp.b64` 行；选 R2：确保该行存在 |
@@ -244,13 +246,14 @@
 | S1 | 确认仓库地址 → **立即**验证推送权限；不足时当场配 PAT（`docs/PUSH-MODES.md`）。然后问基本信息并写入 `site.json` | Q1 | 🤖 |
 | S2 | 推荐并选定模块与信源，生成各 `module.json`，删示例模块 | Q2 | 🤖 |
 | S3 | 筛选要求写入 `site.json` 与各模块编辑口径 | Q3 | 🤖 |
+| S3b | 宪法初始化（主填写）：把 Q1–Q3 已定结论填进根目录 `constitution.md`，替换 §一～§四、§六 的全部占位符；§五中模板固定的门保持原样，管线时间一项留空并标注“待 S10 定”。填完后宪法即生效：S6 起的一切生成工作都受它约束，改动它须走修宪（grill-me + 用户明确批准）。注意：S3b 之前宪法尚无可执行版本，S3 之前各步仍由 Q0 grill 对话约束 | Q1–Q3 | 🤖 |
 | S4 | Telegram 订阅（用户选启用才走手动三件事） | Q4 | 🤖 + ✋ |
 | S5 | 定主题与布局，落 `theme.css` / logo / favicon | Q5 | 🤖 |
 | S6 | 首次全量抓取与生成：`npm run fetch` → 按各模块 `editorial` 口径 + `docs/SCRAPING.md` 编辑（选头条、写摘要点评）→ 头条配图 `node pipeline/run.js --images`（校验 b64 与 edition 引用一一对应）→ `npm run render` 本地渲染 + `npm test` QA → **把渲染结果给用户看**（截图或打开页面）。抓不到够格内容是硬门槛：停在这里，如实告诉用户哪个模块的信源有问题，一起调信源（换源/放宽口径/减模块），直到有内容再往下 | Q6 在 S7 前确认亦可，但图片策略影响本步配图落点，推荐在 S6 前问完 | 🤖 |
 | S7 | Cloudflare Pages 上线：✋ 用户登录 Cloudflare → Workers & Pages → Create → Pages → Connect to Git 选仓库 → 构建配置照抄（构建命令 `npm install && node pipeline/run.js --render-only && npx pagefind --site dist`、输出目录 `dist`、环境变量 `NODE_VERSION=20`；构建只渲染已推送的 edition，不抓取）→ 先推送 S6 的 edition 数据再点 Deploy → 🤖 curl 新站 URL 验收（见完成判据）→ 若启用了 Telegram，把首日全部头条推到频道（频道的开张第一推）→ 若 Q1-7 要了自定义域名，✋ 指引用户在 Pages 里 Custom domains 添加并按提示加 DNS。图片策略（Q6）在本步或 S6 前完成：选 R2 按 `docs/R2-IMAGES.md` 全程走完并冒烟测试通过才算数 | Q6 | ✋ 为主 |
 | S8 | 抓取策略逐条确认，结论写进各模块编辑口径 | Q7 | 🤖 |
 | S9 | 纠错与 QA 开关写入 `site.json` | Q8 | 🤖 |
-| S10 | 定推送模式（Q9-1），按 `crons/` 模板建 3 个定时任务并向用户复述；宿主建不了时按 Q9-2 如实说明 | Q9 | 🤖 |
+| S10 | 定推送模式（Q9-1），按 `crons/` 模板建 3 个定时任务并向用户复述；宿主建不了时按 Q9-2 如实说明 → 同时补填宪法 §五管线时间（抓取/构建/推送时刻；BYOK 手动路径填约定的手动节奏）。补完后宪法不得再有 `{{...}}` 占位符 | Q9 | 🤖 |
 | S11 | 交付：按第 7 节完成判据逐项打勾复核，然后用交付话术收尾（见下） | 全部 | 🤖 |
 
 交付话术（按实际情况填）：「网站上线了，地址是 XXX。每天 X 点自动更新（或：手动运行方式见说明），Y 点推送/汇报。想加模块、换主题、调信源，随时跟我说。」
@@ -265,6 +268,7 @@
 4. **首期 dry-run 构建成功**：首期 edition 已生成，`npm run render` 渲染成功，用户开着 QA 时 `npm test` 通过；渲染结果已给用户看过并确认
 5. **线上验收**：Pages 部署后 curl 首页 HTTP 200、标题是用户的站名、首页内容是首期内容（不是空站）；curl `/feed.xml` 条目数与当期一致；头条配图亲手打开看过至少一张（不只验状态码）；启用 Telegram 时首日头条已推送到频道
 6. **secrets 就位**：5.4 清单里本用户需要的密钥都已存进 `~/.config/newsforge/` 且权限 600；`git status` 里没有任何密钥文件待提交
+7. **宪法就位**：`constitution.md` 无剩余 `{{...}}` 占位符；§五管线时间已按 S10 结论填好；文件已进 git（`git status` 里无未提交的宪法改动）
 
 ## 8. 宿主差异说明
 
