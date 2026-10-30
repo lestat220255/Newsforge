@@ -31,7 +31,8 @@ def load_json(path):
 for script in ['pipeline/run.js', 'pipeline/site-config.js', 'pipeline/probe-sources.js',
                'pipeline/fetch-text.js', 'pipeline/topics.js',
                'pipeline/lib/utils.js', 'pipeline/lib/fetchers.js', 'pipeline/lib/edit.js',
-               'pipeline/lib/images.js', 'pipeline/lib/render.js', 'pipeline/lib/r2-images.js']:
+               'pipeline/lib/images.js', 'pipeline/lib/render.js', 'pipeline/lib/r2-images.js',
+               'pipeline/qa-render-order.js']:
     r = subprocess.run(['node', '--check', script], cwd=ROOT, capture_output=True)
     if r.returncode == 0:
         ok(f'语法 {script}')
@@ -396,23 +397,45 @@ for sec_id in [s['id'] for s in ed['sections']]:
 ok('沿用连续≤1天')
 
 # ---------- 6. 详情页 URL 跨期去重（同 URL 必须同标题；沿用复用原 URL 是设计） ----------
+# 顺序口径（QA-6 修复，2026-10-30）：详情页 URL 序号以渲染为准，即 loadEdition 重排后位置
+# （未证实沉底、发布时间倒序），不是文件原顺序。此处直接调渲染的 loadEdition（经
+# pipeline/qa-render-order.js），不在 Python 里复刻排序规则，避免两份规则漂移。
+# 顺序表拿不到时硬拦本项，绝不静默回落到文件顺序（回落等于把 bug 原样放行）。
 seen = {}
 dups = []
-for d in dates:
-    e = load_json(os.path.join(EDITIONS, f'{d}.json'))
-    for s in e['sections']:
-        for idx, entry in enumerate([s.get('headline')] + list(s.get('items', []))):
-            if not entry:
-                continue
-            url = f"/detail/{s.get('detailDate', d)}/{s['id']}-{idx}/"
-            title = entry.get('title', '')
-            if url in seen and seen[url] != title:
-                dups.append(f'{url} 标题冲突: {seen[url][:15]} vs {title[:15]}')
-            seen[url] = title
-if not dups:
-    ok('详情页 URL 跨期无标题冲突')
-else:
-    fail('详情页 URL 跨期无标题冲突', '; '.join(dups[:5]))
+order_ok = True
+try:
+    r = subprocess.run(['node', 'pipeline/qa-render-order.js'],
+                       cwd=ROOT, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.strip().splitlines()[-1][:200] if r.stderr.strip() else 'node helper 非零退出')
+    render_order = json.loads(r.stdout.strip().splitlines()[-1])
+except Exception as e:
+    fail('详情页 URL 跨期无标题冲突', f'渲染顺序表获取失败：{str(e)[:150]}')
+    order_ok = False
+if order_ok:
+    for d in dates:
+        e = load_json(os.path.join(EDITIONS, f'{d}.json'))
+        for s in e['sections']:
+            titles = (render_order.get(d) or {}).get(s['id'])
+            if titles is None:
+                fail('详情页 URL 跨期无标题冲突', f'{d}/{s["id"]} 缺渲染顺序表')
+                order_ok = False
+                break
+            for idx, title in enumerate(titles):
+                if title is None:
+                    continue
+                url = f"/detail/{s.get('detailDate', d)}/{s['id']}-{idx}/"
+                if url in seen and seen[url] != title:
+                    dups.append(f'{url} 标题冲突: {seen[url][:15]} vs {title[:15]}')
+                seen[url] = title
+        if not order_ok:
+            break
+    if order_ok:
+        if not dups:
+            ok('详情页 URL 跨期无标题冲突')
+        else:
+            fail('详情页 URL 跨期无标题冲突', '; '.join(dups[:5]))
 
 # ---------- 7. 数据文件（首次运行前不存在属正常） ----------
 for f in ['source-health.json', 'corrections.json']:
