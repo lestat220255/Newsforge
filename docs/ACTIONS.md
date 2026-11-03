@@ -6,6 +6,12 @@
 > `playbooks/daily.md` 契约完成编辑，QA 过了才提交上线。
 > 编辑口径、产出物、完成判据与 Muse 模式完全一致，只换宿主。
 > Muse 模式（零 API 成本）见 `docs/SETUP.md` 与 `crons/`。
+>
+> 内部结构（安全边界，见文末「安全须知」）：workflow 分 edit 与
+> publish 两个 job——edit job 只读、只编辑、只产 artifact（agent 在
+> 里面拿不到推送凭证与 R2/Telegram 密钥）；publish job 不跑 agent，
+> 在干净代码树上依次做渲染、R2 上传、QA、密钥扫描、提交、部署确认，
+> 确认线上真已上线后才发 Telegram。
 
 ## 适合谁
 
@@ -155,9 +161,9 @@ API 控制台看这次的真实用量，再决定用哪个档位常态化。
 | 常驻机器 | 需要（Muse 宿主） | 不需要 |
 | 定时精度 | 准时 | 有抖动（见上），可外部触发补 |
 | 编辑契约 | `playbooks/daily.md` | 同一份 |
-| 提交通道 | PAT 直推 / 手动确认（见 `docs/PUSH-MODES.md`） | workflow 用内置令牌自动提交 QA 通过的 edition |
-| Telegram 推送 | 宿主跑 `pipeline/push-telegram.py` | workflow 在提交后代跑，失败只警告 |
-| 故障感知 | 宿主直接向你汇报 | Actions 的失败邮件 + 本次运行的日志附件（保留 14 天） |
+| 提交通道 | PAT 直推 / 手动确认（见 `docs/PUSH-MODES.md`） | publish job 用内置令牌自动提交 QA 与密钥扫描通过的 edition |
+| Telegram 推送 | 宿主跑 `pipeline/push-telegram.py` | publish job 在部署确认通过后代跑，失败只警告 |
+| 故障感知 | 宿主直接向你汇报 | Actions 的失败邮件 + 本次运行的日志附件（保留 14 天）；部署确认失败时 job 直接变红、正常推送不发出 |
 
 两种模式不要在同一个仓库同时启用（会一天出两份或互相覆盖）；
 换模式时先停旧的（删 cron 任务 / 关守卫变量）再启新的。
@@ -172,10 +178,12 @@ API 控制台看这次的真实用量，再决定用哪个档位常态化。
 | agent 步报 `no credits remaining` / 余额不足 | API 钱包没充值（订阅的钱不在这个钱包里，见本页「先分清：订阅与 API 是两个钱包」） | 给 API 钱包充值后重跑；或 Codex 后端改走订阅模式（`NEWSFORGE_CODEX_AUTH=chatgpt` + CODEX_AUTH_JSON） |
 | agent 步超时（退出码 11） | 模块太多或原文太长，3600 秒没跑完 | 调大超时变量，或减模块/关 aiAnalysis；日志附件里能看到它干到哪一步 |
 | 「QA 把关」步变红 | edition 没过检查（结构/字数/图片对应等） | 站点保持昨天的版本，不会发半成品；下载本次运行的 `daily-logs` 附件看 QA 原始报错，修配置或信源后手动重跑 |
-| 提交步报「没有任何可提交变更」 | agent 没产出（抓取全灭或认证假过等） | 看 agent 日志附件；抓取问题先本地 `npm run probe` 看信源健康 |
+| 提交步报「没有任何可提交变更」 | agent 没产出（抓取全灭或认证假过等） | 看 agent 日志附件；抓取问题先本地 `npm run probe` 看信源健康。注意：若今日 edition 已在仓库中（部署确认失败后重跑），本步会跳过提交直接进入部署确认，不算失败 |
 | 定时没触发 | GitHub 抖动，或 60 天无活动被禁用 schedule | 手动 Run workflow 兜底；长期改用外部 repository_dispatch 触发 |
 | 站上线了但 Telegram 没推 | bot token 没配、机器人不是频道管理员、或 `features.telegram.enabled` 没开 | 看 Telegram 那一步的 warning 输出逐项对 |
-| push 成功但网站没更新 | Cloudflare Pages 构建问题（与宿主无关） | 看 Pages 后台的构建日志，排查口径同 `docs/SETUP.md` 故障排查节 |
+| 「部署确认」步变红、Telegram 没发 | Pages 构建失败、构建超时、或 CDN 缓存未刷新（10 分钟轮询内线上仍无今日链接） | 先看 Pages 后台的构建日志（排查口径同 `docs/SETUP.md` 故障排查节）；构建本身成功只是缓存未到时，等缓存刷新后手动 Run workflow 兜底（幂等：当日 edition 已存在会直接结束，不重复编辑） |
+| 「密钥扫描」步变红 | 待提交文件里出现疑似密钥（多半是 agent 把读到的东西写进了 edition） | 不要直接重跑：先下载 artifact 检查是哪段内容命中，确认不是真密钥后修掉对应内容再重跑；若是真密钥，立即吊销该密钥再处理 |
+| push 成功但网站没更新 | 正常情况下部署确认步会先于 Telegram 发现并变红；若绕过它（旧版 workflow）才出现此现象 | 看 Pages 后台的构建日志，排查口径同 `docs/SETUP.md` 故障排查节 |
 
 ## 安全须知
 
@@ -183,7 +191,14 @@ API 控制台看这次的真实用量，再决定用哪个档位常态化。
   GitHub 会自动打码已登记的 secret 值，但 agent 的输出日志附件
   不受这层保护——playbook 已明令 agent 不复述密钥，下载附件时
   仍请按敏感文件对待。
-- workflow 的内置令牌只有 `contents: write` 一项权限，只够把
-  edition 提交回本仓库。
+- 权限按 job 分：edit job 只有 `contents: read`，checkout 不持久化
+  凭证，agent 在里面既无权限也无凭证可推代码；publish job 才有
+  `contents: write`，且不跑 agent。agent 步骤的 env 只给当前后端
+  的那一个 key，R2 与 Telegram 密钥只出现在 publish job——安全边界
+  是 job 级隔离，不是写在提示词里的禁令。
+- publish job 的代码树是锁定提交的干净 checkout，QA 与密钥扫描跑在
+  agent 没碰过的代码上；提交只含日期精确路径，agent 写到白名单外
+  的文件带不进仓库。密钥扫描是启发式（已知密钥前缀与赋值形），
+  是最后一道网，不是保证——真正的保证是 edit job 里根本没有这些密钥。
 - 外部触发用的 PAT 只给目标仓库的最小权限，用完可在 GitHub
   设置里随时吊销。

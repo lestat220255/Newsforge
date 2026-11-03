@@ -17,9 +17,11 @@ argv E2BIG——jobmatch 2026-10-21 实测 137 KB 的 prompt 作为 argv 直接
      JSON、图片、.ready 摘要等一整套工作区文件，agent 必须能落盘、
      能跑 npm 命令。jobmatch 精筛是「一份 JSON 进、一份 JSON 出」，
      才适合 read-only 内联模式——两者场景不同，不要互相套用。
-  2. 安全性不靠沙箱只读，靠事后把关：workflow 在 agent 之后依次跑
-     构建渲染与 `npm test` QA，QA 不过就不 commit；agent 本人也被
-     明令禁止 git commit / git push（写在注入的任务段里）。
+  2. 安全性不靠沙箱只读，也不靠提示词禁令：真正的安全边界在
+     workflow 的 job 级隔离（见 .github/workflows/daily.yml）——
+     edit job 只读、无 git 凭证、agent 步骤 env 里只有当前后端的 key；
+     publish job 在干净代码树上重跑构建、QA 与密钥扫描后才提交。
+     注入任务段里的“不要 git commit / git push”只是补充提醒。
 
 认证：用各 CLI 自己的登录态。API key 只从环境变量读
 （ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY），绝不写进
