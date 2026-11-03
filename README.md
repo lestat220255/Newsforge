@@ -4,7 +4,7 @@
   <img src="public/logo.png" width="96" alt="Newsforge logo">
 </p>
 
-用 AI 对话造一个**属于你自己的每日新闻站**。纯静态、零代码、零成本、零运维。
+用 AI 对话造一个**属于你自己的每日新闻站**。纯静态、零代码、新增成本接近零、几乎零运维。
 
 每天早晨，AI 助手自动抓取你关心的信源、写成摘要，经你确认后部署到 Cloudflare Pages 上。
 
@@ -27,7 +27,7 @@ Newsforge 不是一个现成的新闻网站，而是一个**建站模板**：你
 
 ## 花多少钱
 
-**零。** Cloudflare Pages 免费托管，不绑定域名的话直接用 `*.pages.dev` 子域名。唯一的成本是你自己的 AI 订阅（本来就有）——默认路径下，站内所有 AI 工作都由你的 AI 助手完成，不调用任何付费 API。（还有一条备用的全自动路径，需要自备 LLM API key，见下文「两条运行路径」。）
+**新增成本接近零。** Cloudflare Pages 免费托管，不绑定域名的话直接用 `*.pages.dev` 子域名。严格拆开是三档：已有 AI 订阅且走默认路径→新增成本为零（站内所有 AI 工作都由你的 AI 助手完成，不调用任何付费 API）；BYOK 路径→按量付 API 费（见下文「两条运行路径」与 `docs/ACTIONS.md` 成本量级）；Cloudflare Pages 在免费额度内托管为零，超额度按 Cloudflare 价目。
 
 没有 Muse 也行：初始化可以改用终端里的 agent CLI（Claude Code / Codex / Gemini CLI）+ 你自己的 API key 完成，两种模式走同一份初始化契约（见 `docs/ONBOARDING.md`）。说清楚成本口径：**初始化是一次性会话，token 量很小、成本极低**；持续的 API 成本只在你选择让"每日运行"也走 API 时才产生（见「两条运行路径」的路径 B），用 Muse 托管每日运行则一直是零 API 成本。
 

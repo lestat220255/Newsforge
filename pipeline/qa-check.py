@@ -382,6 +382,29 @@ if not missing:
 else:
     fail('图片一一对应', '; '.join(missing[:5]))
 
+# R2 模式本地引用检查：R2 模式下当期 edition 的本地 /images/ 引用 =
+# 未上传（上传步已把全部本地图改写为公网 URL，且 b64 文件不进 git，
+# 线上没有这些图）。edit 阶段 agent 本地自查时图片尚未上传，故只在
+# NEWSFORGE_QA_AFTER_UPLOAD=1 时判失败（publish job 的 QA 步设置它）。
+# 注意：只读 site.json 本身，不读 site.json.example（示例里 r2 默认开）。
+try:
+    _r2_flag = load_json(os.path.join(ROOT, 'site.json')).get('features', {}).get('r2')
+    _r2_enabled = _r2_flag.get('enabled') if isinstance(_r2_flag, dict) else bool(_r2_flag)
+except Exception:
+    _r2_enabled = False
+if _r2_enabled and os.environ.get('NEWSFORGE_QA_AFTER_UPLOAD') == '1':
+    _local = []
+    for sec in ed['sections']:
+        _entries = ([sec.get('headline')] if sec.get('headline') else []) + (sec.get('items') or [])
+        for _e in _entries:
+            _im = (_e or {}).get('image')
+            if isinstance(_im, str) and _im.startswith('/images/'):
+                _local.append(_im)
+    if _local:
+        fail('R2 模式下仍有本地图片引用（未上传）', '; '.join(_local[:5]))
+    else:
+        ok('R2 模式无本地图片引用')
+
 # ---------- 5. 沿用 ≤1 天 ----------
 for sec_id in [s['id'] for s in ed['sections']]:
     streak = 0

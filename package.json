@@ -20,7 +20,11 @@
     "fetch": "node pipeline/run.js --fetch-only",
     "probe": "node pipeline/probe-sources.js",
     "render": "node pipeline/run.js --render-only",
-    "test": "python3 pipeline/qa-check.py && node --test pipeline/lib/utils.test.js pipeline/lib/r2-images.test.js"
+    "test:unit": "node --test pipeline/lib/utils.test.js pipeline/lib/r2-images.test.js",
+    "test:contract": "python3 scripts/check-actions-contract.py",
+    "test:agent": "python3 tests/run_agent_test.py",
+    "qa": "python3 pipeline/qa-check.py",
+    "test": "npm run test:unit && npm run test:contract && npm run test:agent && npm run qa"
   },
   "type": "module",
   "version": "0.1.0",

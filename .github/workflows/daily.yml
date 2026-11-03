@@ -49,6 +49,10 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read # 只读：agent 拿不到推送凭证，禁 push 是机制不是提示词
+    outputs:
+      # 日期是一次运行的不可变参数：edit 算一次，publish 经 outputs 取用，
+      # 不许各自重算（跨午夜运行会错位，见提案 2026-11-04-p1-followups）
+      today: ${{ steps.date.outputs.TODAY }}
     env:
       NEWSFORGE_AGENT_BACKEND: ${{ vars.NEWSFORGE_AGENT_BACKEND || 'codex' }}
       NEWSFORGE_CODEX_AUTH: ${{ vars.NEWSFORGE_CODEX_AUTH || 'apikey' }}
@@ -107,7 +111,8 @@ jobs:
           esac
           echo "编辑侧配置校验通过：backend=$NEWSFORGE_AGENT_BACKEND auth=$NEWSFORGE_CODEX_AUTH"
 
-      - name: 计算今日日期（站点时区）
+      - name: 计算今日日期（站点时区，本次运行唯一日期来源）
+        id: date
         run: |
           TODAY=$(python3 - <<'PYEOF'
           import json
@@ -122,6 +127,7 @@ jobs:
           PYEOF
           )
           echo "TODAY=$TODAY" >> "$GITHUB_ENV"
+          echo "TODAY=$TODAY" >> "$GITHUB_OUTPUT"
           echo "今日日期（站点时区）：$TODAY"
 
       - name: 确定性抓取
@@ -235,24 +241,25 @@ jobs:
               fi
             done
           fi
+          # R2 开关一致性：workflow 变量与 site.json flag 必须同值，否则
+          # 一边跳过上传、一边按 R2 模式渲染，线上图会坏且报错不直观
+          python3 - <<'PYEOF'
+          import json, os, sys
+          site = json.load(open("site.json"))
+          r2 = (site.get("features") or {}).get("r2")
+          flag = r2.get("enabled") if isinstance(r2, dict) else bool(r2)
+          var = os.environ.get("NEWSFORGE_R2_ENABLED") == "true"
+          if flag != var:
+              print(f"::error::R2 开关不一致：site.json features.r2.enabled={flag}，"
+                    f"NEWSFORGE_R2_ENABLED={var}，两者必须一致（见 docs/ACTIONS.md）")
+              sys.exit(1)
+          PYEOF
           echo "发布侧配置校验通过"
 
-      - name: 计算今日日期（站点时区，与 edit job 同口径重算，不信任 artifact）
+      - name: 取本次运行日期（edit job 的 outputs，不重算）
         run: |
-          TODAY=$(python3 - <<'PYEOF'
-          import json
-          from datetime import datetime, timedelta, timezone
-          try:
-              from zoneinfo import ZoneInfo
-              tz_name = json.load(open("site.json"))["site"].get("timezone") or "Asia/Shanghai"
-              tz = ZoneInfo(tz_name)
-          except Exception:
-              tz = timezone(timedelta(hours=8))
-          print(datetime.now(tz).strftime("%Y-%m-%d"))
-          PYEOF
-          )
-          echo "TODAY=$TODAY" >> "$GITHUB_ENV"
-          echo "今日日期（站点时区）：$TODAY"
+          echo "TODAY=${{ needs.edit.outputs.today }}" >> "$GITHUB_ENV"
+          echo "今日日期（edit job 传入）：${{ needs.edit.outputs.today }}"
 
       - name: 取 edit job 的产物
         uses: actions/download-artifact@v4
@@ -287,18 +294,36 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: node pipeline/run.js --upload-images --date="$TODAY"
 
+      - name: 安装契约测试依赖（pyyaml，供 npm test 里的契约测试用）
+        run: python3 -m pip install pyyaml
+
       - name: QA 把关（不过不提交；跑在干净代码树上）
-        run: npm test
+        # NEWSFORGE_QA_AFTER_UPLOAD=1：此时 R2 上传已完成，QA 的 R2 本地
+        # 引用检查才生效；edit 阶段 agent 本地自查时图片尚未上传，故不设
+        run: NEWSFORGE_QA_AFTER_UPLOAD=1 npm test
 
       - name: 密钥扫描（防 agent 把读到的东西藏进待提交文件）
         run: |
           python3 scripts/check-edition-secrets.py \
             "data/editions/$TODAY.json" "data/editions/$TODAY.ready" data/image-dims.json
 
+      - name: 写部署标记（edition 内容哈希，部署确认比对版本用）
+        # 注意：必须在最后一次 edition 改写（R2 上传）之后、提交之前；
+        # 哈希取最终提交文件的字节，内容相同则哈希相同，旧部署通过在
+        # 语义上也是对的（内容本来就一样）。commit SHA 不能用：它在
+        # 提交后才产生，无法预嵌进本次提交的文件。
+        # 字段名 editionSha256 即语义：这是“内容版本标记”，不是整站构建
+        # 版本——模板/CSS/JS 变化但 edition 内容不变时，哈希不变（明确边界）。
+        run: |
+          HASH=$(python3 -c "import hashlib; print(hashlib.sha256(open('data/editions/$TODAY.json','rb').read()).hexdigest())")
+          printf '{"editionSha256":"%s","date":"%s"}' "$HASH" "$TODAY" > public/build-id.json
+          echo "内容版本标记 editionSha256=$HASH"
+
       - name: 提交并推送今日 edition（日期精确路径）
         run: |
           git config user.name "newsforge-actions"
           git config user.email "actions@localhost"
+          git add public/build-id.json
           git add "data/editions/$TODAY.json"
           [ -f "data/editions/$TODAY.ready" ] && git add "data/editions/$TODAY.ready"
           [ -f data/image-dims.json ] && git add data/image-dims.json

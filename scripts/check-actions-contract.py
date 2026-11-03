@@ -8,9 +8,14 @@
   3. 触发：schedule 默认 cron 为 30 21 * * *（= 北京时间 05:30）、workflow_dispatch、
      repository_dispatch（event_type newsforge-daily）三入口都在
   4. 步骤（跨 job 对账）：edit job 含 run-agent 跑 playbooks/daily.md、确定性抓取、
-     Codex 的 AppArmor 放行步；publish job 含构建渲染、npm test QA 门、git commit/push、
-     密钥扫描、部署确认、push-telegram.py（且部署确认在 Telegram 之前）；任一 job
+     Codex 的 AppArmor 放行步；publish job 含构建渲染、R2 上传（在 QA 之前）、
+     npm test QA 门、密钥扫描、build-id 标记、git commit/push（含 build-id.json）、
+     部署确认、push-telegram.py（且部署确认在 Telegram 之前）；任一 job
      含 failure() 时 upload-artifact
+  4b. 日期不可变：edit job 定义 outputs.today，publish job 用
+     needs.edit.outputs.today，不重算
+  4c. R2 开关一致性：publish 配置校验含 var 与 site.json flag 对账断言
+  4d. npm test 纳入契约测试与 agent 模拟测试（package.json 的 test 脚本）
   5. playbooks/daily.md 章节齐全（输入/步骤序列/输出清单/护栏/完成判据/失败时如何求助），
      且只引用编辑原则与抓取文档（不复制规则）、含 RUN-SUMMARY 约定
   6. 名称对账：workflow 里引用的 vars.*/secrets.* 集合与 docs/ACTIONS.md 清单
@@ -24,6 +29,7 @@
 用法：python3 scripts/check-actions-contract.py（在仓库根目录运行）
 退出码：0 = 全过；1 = 有失败项。
 """
+import json
 import re
 import subprocess
 import sys
@@ -111,6 +117,38 @@ def main():
               "git commit" in publish_runs and "git push" in publish_runs)
         check("publish 步骤含密钥扫描（check-edition-secrets.py）",
               "check-edition-secrets.py" in publish_runs)
+        check("publish 步骤含 build-id 标记（build-id.json）",
+              "build-id.json" in publish_runs)
+        check("publish 提交步含 build-id.json",
+              "git add public/build-id.json" in publish_runs)
+        check("publish 配置校验含 R2 开关一致性断言",
+              "开关不一致" in publish_runs)
+        publish_run_list = [str(step.get("run", ""))
+                            for step in (publish.get("steps") or [])
+                            if isinstance(step, dict)]
+        upload_idx = next((i for i, r in enumerate(publish_run_list)
+                           if "--upload-images" in r), -1)
+        qa_idx = next((i for i, r in enumerate(publish_run_list)
+                       if "npm test" in r), -1)
+        check("R2 上传步在 QA 步之前",
+              0 <= upload_idx < qa_idx, f"upload={upload_idx} qa={qa_idx}")
+        upload_steps = [step for step in (publish.get("steps") or [])
+                        if isinstance(step, dict)
+                        and "--upload-images" in str(step.get("run", ""))]
+        check("R2 上传步无 continue-on-error（失败即中止发布）",
+              all(step.get("continue-on-error") is not True for step in upload_steps)
+              and bool(upload_steps), str(upload_steps))
+        check("publish QA 步设 NEWSFORGE_QA_AFTER_UPLOAD=1（R2 本地引用检查生效）",
+              any("NEWSFORGE_QA_AFTER_UPLOAD=1" in r for r in publish_run_list))
+        check("build-id 标记步写 editionSha256 字段",
+              any("editionSha256" in r for r in publish_run_list))
+        check("edit job 定义 outputs.today",
+              "steps.date.outputs.TODAY" in str(edit.get("outputs", "")),
+              str(edit.get("outputs")))
+        check("edit 计算日期步写 GITHUB_OUTPUT",
+              "GITHUB_OUTPUT" in edit_runs)
+        check("publish job 用 needs.edit.outputs.today（不重算日期）",
+              "needs.edit.outputs.today" in publish_runs)
         check("publish 步骤含部署确认（verify-deploy.py）",
               "verify-deploy.py" in publish_runs)
         publish_steps = publish.get("steps") or []
@@ -189,6 +227,30 @@ def main():
         check(f"ACTIONS.md 含「{section}」", section in doc_text)
     check("ACTIONS.md 指向 playbooks/daily.md", "playbooks/daily.md" in doc_text)
     check("ACTIONS.md 披露 60 天无活动禁用 schedule", "60 天" in doc_text)
+
+    # 4d. npm scripts 按职责拆分，test 依次跑四者
+    try:
+        pkg_scripts = json.loads((ROOT / "package.json").read_text(encoding="utf-8")
+                                 ).get("scripts", {})
+    except (OSError, ValueError):
+        pkg_scripts = {}
+    check("test:contract 跑契约测试",
+          "check-actions-contract.py" in pkg_scripts.get("test:contract", ""))
+    check("test:agent 跑 agent 模拟测试",
+          "run_agent_test.py" in pkg_scripts.get("test:agent", ""))
+    check("qa 跑 qa-check.py",
+          "pipeline/qa-check.py" in pkg_scripts.get("qa", ""))
+    check("test:unit 跑 node 单测",
+          "node --test" in pkg_scripts.get("test:unit", ""))
+    test_entry = pkg_scripts.get("test", "")
+    check("test 依次跑 test:unit / test:contract / test:agent / qa",
+          all(s in test_entry for s in
+              ("test:unit", "test:contract", "test:agent", "qa")), test_entry[:160])
+
+    # 4e. 渲染把 public/ 拷到 dist/（build-id.json 才能随构建上线）
+    render_text = read(ROOT / "pipeline" / "lib" / "render.js")
+    check("渲染复制 public/ 到 dist/（build-id.json 能上线）",
+          "cpSync(pubDir, DIST" in render_text)
 
     # 8. 品牌残留
     new_files = [PLAYBOOK, ACTIONS_DOC, WORKFLOW,

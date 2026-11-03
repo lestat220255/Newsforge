@@ -20,10 +20,13 @@
 - **Actions 模式**：宿主是 `.github/workflows/daily.yml`（edit + publish
   两个 job）：edit job 先跑确定性抓取，再用 `scripts/run-agent` 把本文件
   交给你（headless），你在 D7 之后停手——渲染、R2 上传、QA、密钥扫描、
-  commit、部署确认、Telegram 都由 publish job 在你返回后依次执行；
+  部署标记、commit、部署确认、Telegram 都由 publish job 在你返回后依次执行；
   QA 不过就没有提交，这一步没有例外。注意：edit job 是只读权限且没有
   git 凭证，你在任何情况下都不直接 `git push`；R2 上传（D6）也不由你做，
-  publish job 的确定性步骤会做。
+  publish job 的确定性步骤会做。日期由 edit job 计算一次、经 job outputs
+  传给 publish job，一次运行内不可变；部署确认比对 edition 内容哈希
+  （`public/build-id.json`，字段 `editionSha256`，即“内容版本标记”），
+  不是只看详情页链接在不在。
 
 执行者必须具备：读写文件、执行命令（`npm` / `node` / `python3` / `curl`）、
 按文档口径做编辑判断。缺任何一项，停下来在回复里说明缺什么，不许假装执行过。
@@ -150,7 +153,8 @@
   与 `crons/push-ask.md` 的发布后检查清单执行。
 - Actions 模式：publish job 在干净代码树上重跑渲染、R2 上传、QA 与
   密钥扫描，全部通过后用 `GITHUB_TOKEN` 提交当期 edition、`.ready`、
-  `data/image-dims.json`（R2 模式）与当期图片并推送。执行者在任何模式
+  `data/image-dims.json`（R2 模式）、当期图片与 `public/build-id.json`
+  （当期 edition 内容哈希，字段 `editionSha256`，部署确认比对版本用）并推送。执行者在任何模式
   下都不直接 `git push`（Actions 模式下既无权限也无凭证：edit job 只读、
   checkout 不持久化凭证）。
 
@@ -158,7 +162,8 @@
 
 - 仅当 `features.telegram.enabled`：宿主在**部署确认通过后**跑
   `python3 pipeline/push-telegram.py <今日>`（沿用模块自动跳过，
-  规则在脚本内）。部署确认（publish job 轮询线上首页/feed/抽查图片）
+  规则在脚本内）。部署确认（publish job 轮询线上首页/feed/editionSha256/
+  抽查图片，其中线上 editionSha256 必须与本次提交的 edition 内容哈希全等）
   未通过时不发正常推送。推送失败只警告，不回滚已确认上线的 edition。
 
 ## 4. 输出清单
@@ -202,9 +207,9 @@
 5. `data/editions/<今日>.ready` 已写，条数口径正确
 6. 最终回复含 `RUN-SUMMARY:` 行
 
-Actions 模式下宿主侧还有三道额外门禁（都在 publish job，与执行者无关）：
-干净代码树上重跑的 QA、提交前密钥扫描、推送后部署确认——三者任一
-不过，提交或推送即停止。
+Actions 模式下宿主侧还有额外门禁（都在 publish job，与执行者无关）：
+R2 开关一致性校验、干净代码树上重跑的 QA、提交前密钥扫描、推送后
+版本级部署确认（editionSha256 全等）——任一不过，提交或推送即停止。
 
 ## 7. 失败时如何求助
 

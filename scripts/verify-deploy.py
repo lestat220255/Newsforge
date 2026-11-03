@@ -3,9 +3,16 @@
 
 检查项（全部通过才算上线）：
   1. 首页 HTTP 200
-  2. feed.xml HTTP 200，且含今日详情页链接（非沿用板块的 /detail/<今日>/…）；
-     全沿用（无今日链接）时只要求 feed 200——沿用日本来就没有新链接
-  3. edition 里抽查最多 2 张图片 URL：HTTP 200；以 .webp 结尾的还要求
+  2. feed.xml HTTP 200
+  3. 版本级校验（主判据）：线上 /build-id.json 的 editionSha256 必须等于
+     本地当期 edition JSON 的 sha256——详情页 URL 作标记会在同日二次
+     发布与全沿用时误判，内容哈希不会（内容相同则哈希相同，旧部署
+     通过在语义上也是对的；内容不同则哈希一定不同，必须等新部署）。
+     注意：这是“内容版本标记”，不是整站构建版本——模板/CSS/JS 变化但
+     edition 内容不变时，哈希不变（明确边界）。
+  4. feed.xml 含今日详情页链接（非沿用板块的 /detail/<今日>/…）；
+     全沿用（无今日链接）时跳过本项，buildId 已覆盖该情况
+  5. edition 里抽查最多 2 张图片 URL：HTTP 200；以 .webp 结尾的还要求
      Content-Type 为 image/*
 
 用法：python3 scripts/verify-deploy.py --date YYYY-MM-DD
@@ -14,6 +21,7 @@
 data/editions/<今日>.json 读。退出码：0=已确认上线；1=超时未确认。
 """
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -30,11 +38,11 @@ def fetch(url, timeout=20):
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = resp.read()
+            ctype = resp.headers.get_content_type() or ""
             text = None
-            if "text" in (resp.headers.get_content_type() or "") or \
-                    "xml" in (resp.headers.get_content_type() or ""):
+            if any(k in ctype for k in ("text", "xml", "json")):
                 text = body.decode("utf-8", "replace")
-            return resp.status, resp.headers.get_content_type() or "", text
+            return resp.status, ctype, text
     except urllib.error.HTTPError as exc:
         return exc.code, "", None
     except Exception as exc:  # 超时、DNS、连接失败都算未上线
@@ -57,7 +65,7 @@ def collect_markers(edition, date_str):
     return markers, images
 
 
-def check_once(base_url, edition, date_str):
+def check_once(base_url, edition, date_str, expected_hash):
     """一轮检查；返回 (ok, 原因)。"""
     home_status, _, _ = fetch(base_url + "/")
     if home_status != 200:
@@ -65,6 +73,15 @@ def check_once(base_url, edition, date_str):
     feed_status, _, feed_text = fetch(base_url + "/feed.xml")
     if feed_status != 200:
         return False, f"feed.xml HTTP {feed_status}"
+    marker_status, _, marker_text = fetch(base_url + "/build-id.json")
+    if marker_status != 200:
+        return False, f"build-id.json HTTP {marker_status}（新部署尚未上线）"
+    try:
+        online_hash = json.loads(marker_text or "")["editionSha256"]
+    except (ValueError, KeyError, TypeError):
+        return False, "build-id.json 不是合法标记（新部署尚未上线）"
+    if online_hash != expected_hash:
+        return False, "线上 editionSha256 与本次提交不一致（还是旧版本）"
     markers, images = collect_markers(edition, date_str)
     if markers and not any(m in (feed_text or "") for m in markers):
         return False, "feed.xml 里还没有今日详情页链接（Pages 构建可能未完成）"
@@ -75,7 +92,7 @@ def check_once(base_url, edition, date_str):
             return False, f"图片 {url} HTTP {status}"
         if url.endswith(".webp") and not ctype.startswith("image/"):
             return False, f"图片 {url} Content-Type 不是图片：{ctype}"
-    return True, "首页、feed、抽查图片全部就绪"
+    return True, "首页、feed、editionSha256、抽查图片全部就绪"
 
 
 def main(argv=None):
@@ -99,13 +116,15 @@ def main(argv=None):
     if not edition_path.is_file():
         print(f"verify-deploy: 找不到 {edition_path}", file=sys.stderr)
         return 1
-    edition = json.loads(edition_path.read_text(encoding="utf-8"))
+    edition_bytes = edition_path.read_bytes()
+    edition = json.loads(edition_bytes.decode("utf-8"))
+    expected_hash = hashlib.sha256(edition_bytes).hexdigest()
 
     deadline = time.time() + args.timeout
     attempt = 0
     while True:
         attempt += 1
-        ok, reason = check_once(base_url, edition, args.date)
+        ok, reason = check_once(base_url, edition, args.date, expected_hash)
         if ok:
             print(f"verify-deploy: 已确认上线（第 {attempt} 次检查）：{reason}")
             return 0
