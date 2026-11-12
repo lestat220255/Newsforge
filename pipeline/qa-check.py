@@ -131,7 +131,12 @@ for sec in ed['sections']:
             ok(f'{sid} hidden 为空')
         continue
     h = sec.get('headline') or {}
+    # 降级产物（fallback: true，无 AI 编辑）：comment / analysis 缺失是预期内的，
+    # 详情页已有无分析占位与无点评不渲染的兜底；只豁免这两项，其余字段照常检查。
+    _fb_h = bool(h.get('fallback'))
     for k in HL_REQ:
+        if _fb_h and k in ('comment', 'analysis'):
+            continue
         if not h.get(k):
             fail(f'{sid} 头条缺字段 {k}', '')
     if len(h.get('summary', '')) > 200:
@@ -144,7 +149,10 @@ for sec in ed['sections']:
         fail(f'{sid} 头条 url 非法', h.get('url', '')[:50])
     # 不变式
     for it in sec.get('items', []):
+        _fb_it = bool(it.get('fallback'))
         for k in IT_REQ:
+            if _fb_it and k == 'analysis':
+                continue
             if not it.get(k):
                 fail(f'{sid} 次条缺字段 {k}', it.get('title', '')[:20])
         if len(it.get('blurb', '')) > 20:
@@ -230,9 +238,11 @@ if NEW_RULES:
             if not entry:
                 continue
             title = entry.get('title', '')[:20]
-            # 当事方回应三态必填；responded 须有回应内容
+            # 当事方回应三态必填；responded 须有回应内容；降级产物豁免（无 AI 核查原文）
             pr = entry.get('partyResponse')
-            if not isinstance(pr, dict) or pr.get('status') not in ('responded', 'declined', 'not_mentioned'):
+            if entry.get('fallback'):
+                ok(f'{sid} {label} partyResponse 为降级占位（豁免）')
+            elif not isinstance(pr, dict) or pr.get('status') not in ('responded', 'declined', 'not_mentioned'):
                 fail(f'{sid} {label} partyResponse 缺失/非法', title)
             elif pr.get('status') == 'responded' and not (isinstance(pr.get('text'), str) and pr.get('text').strip()):
                 fail(f'{sid} {label} partyResponse responded 缺回应内容', title)
@@ -280,9 +290,11 @@ if NEW_RULES:
                     fail(f'{sid} {label} 自我引用链接无法解析或非往期', f'{title} {bad_url[0]}')
                 elif urls and not SITE_LANG.startswith('zh'):
                     ok(f'{sid} {label} 自我引用可解析')
-            # 分析三段式（事实/分析/对读者的意义）+ 分析小节须含 AI 推断标注
+            # 分析三段式（事实/分析/对读者的意义）+ 分析小节须含 AI 推断标注；降级产物豁免
             paras = [p.strip() for p in (entry.get('analysis') or '').split('\n\n') if p.strip()]
-            if len(paras) != 3:
+            if entry.get('fallback'):
+                ok(f'{sid} {label} 分析为降级占位（豁免三段式）')
+            elif len(paras) != 3:
                 fail(f'{sid} {label} 分析非三段式', title)
             elif INFERENCE_MARKER not in paras[1]:
                 fail(f'{sid} {label} 分析小节缺 AI 推断标注', title)

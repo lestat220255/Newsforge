@@ -78,7 +78,8 @@ async function main() {
     return;
   }
   // 无 LLM key（如 Cloudflare Pages 环境）：只渲染已推送的 edition，不抓取不编辑
-  if (!process.env.LLM_API_KEY) {
+  // --skip-llm（build:dry）不走 LLM，豁免 key 检查，否则该参数永远无法生效
+  if (!process.env.LLM_API_KEY && !SKIP_LLM) {
     console.log('未检测到 LLM_API_KEY，仅渲染已有版本');
     await renderAll({ today: TODAY });
     return;

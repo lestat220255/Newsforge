@@ -94,6 +94,12 @@ async function callLLM(section, items) {
   return JSON.parse(text);
 }
 
+// 无 AI 降级选稿（--skip-llm / LLM 失败时用）：只填有把握的字段，不编造。
+// 契约：publisher 直接取来源名（渲染层同款回退）；blurb 取标题前 20 字，
+// 不再拿 source 当 blurb（否则首页同一行出现两次来源名）；comment / analysis /
+// keyFacts / partyResponse 一律不写——没有 AI 就写不出，硬填空串或假值只会让
+// QA 误判。条目打 fallback: true 标记，qa-check.py 对其豁免分析类检查
+// （三段式 / AI 推断标注 / 当事方回应 / 点评必填），结构性检查照常。
 function fallbackPick(items) {
   const top = items.slice(0, 4);
   if (!top.length) return { headline: null, items: [] };
@@ -103,20 +109,20 @@ function fallbackPick(items) {
       title: h.title,
       url: h.url,
       source: h.source,
+      publisher: h.source,
       publishedAt: h.publishedAt,
       summary: '（AI 摘要暂不可用，请点击原文阅读）',
-      comment: '',
-      analysis: '',
-      keyFacts: [],
+      fallback: true,
     },
     items: rest.map((it) => ({
       title: it.title,
       url: it.url,
       source: it.source,
+      publisher: it.source,
       publishedAt: it.publishedAt,
-      blurb: it.source,
-      analysis: '',
-      keyFacts: [],
+      blurb: String(it.title || '').trim().slice(0, 20),
+      summary: String(it.title || '').trim(),
+      fallback: true,
     })),
   };
 }
